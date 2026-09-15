@@ -2,6 +2,7 @@
  * Solar System Explorer — application entry point.
  * Layer: root composition root — the ONLY file allowed to wire layers together.
  */
+import { Engine } from './core/engine';
 import { createCanvas } from './render/canvas';
 
 function boot(): void {
@@ -16,15 +17,20 @@ function boot(): void {
     throw new Error('Boot failed: WebGL2 is not available in this browser.');
   }
 
-  const frame = (): void => {
-    // Temporary Step-1 render loop; replaced by the Engine kernel in Step 2.
-    gl.clearColor(0.008, 0.008, 0.016, 1); // deep-space black
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    requestAnimationFrame(frame);
-  };
-  requestAnimationFrame(frame);
+  const engine = new Engine();
 
-  console.info('[solar-system-glm] Step 1 scaffold online — WebGL2 context acquired.');
+  // Step-2 placeholder renderer: deep-space clear driven by the kernel's interpolation alpha.
+  engine.registerRenderer({
+    render: (alpha: number): void => {
+      gl.clearColor(0.008 + 0.004 * alpha, 0.008, 0.016, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    },
+  });
+
+  window.addEventListener('resize', managed.resize);
+  engine.start();
+  console.info(`[solar-system-glm] ${engine.version} kernel online.`);
 }
 
 boot();
+

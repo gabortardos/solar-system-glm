@@ -7,10 +7,13 @@ import type { LlmProvider } from '../src/knowledge/provider';
 import type { OverlayPanel } from '../src/ui/overlay';
 
 describe('Step 1 — foundation scaffold', () => {
-  it('boots the engine kernel stub', () => {
+  it('boots the engine kernel', () => {
     const engine = new Engine();
-    expect(engine.version).toContain('step1');
-    expect(engine.updatables).toEqual([]);
+    expect(engine.version).toContain('step2');
+    expect(engine.events).toBeTruthy();
+    expect(engine.time).toBeTruthy();
+    expect(engine.loop).toBeTruthy();
+    expect(engine.services).toBeTruthy();
   });
 
   it('ships a schema-valid catalog seed', () => {

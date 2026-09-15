@@ -72,7 +72,8 @@ describe('architecture — visualization ⟂ data separation', () => {
       for (const spec of specs) {
         if (spec.startsWith('.')) {
           const target = targetLayerOf(file, spec);
-          if (target !== null) {
+          // Intra-layer imports (core -> core, render -> render, ...) are always allowed.
+          if (target !== null && target !== layer) {
             expect(
               ALLOWED[layer]!,
               `${rel} (layer "${layer}") must not import layer "${target}"`,
