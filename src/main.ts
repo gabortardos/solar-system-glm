@@ -4,6 +4,12 @@
  */
 import { Engine } from './core/engine';
 import { createCanvas } from './render/canvas';
+import { SolarScene } from './render/scene';
+import type { ScaleMode } from './render/scale';
+import { heliocentricScenePositions } from './render/sync';
+import { daysSinceJ2000 } from './sim/orbit';
+
+const SECONDS_PER_DAY = 86_400;
 
 function boot(): void {
   const host = document.querySelector<HTMLElement>('#app');
@@ -12,25 +18,45 @@ function boot(): void {
   }
 
   const managed = createCanvas(host);
-  const gl = managed.canvas.getContext('webgl2');
-  if (!gl) {
+  if (!managed.canvas.getContext('webgl2')) {
     throw new Error('Boot failed: WebGL2 is not available in this browser.');
   }
 
   const engine = new Engine();
+  const scene = new SolarScene(managed.canvas, 'compressed');
+  const bootEpochDays = daysSinceJ2000(new Date());
 
-  // Step-2 placeholder renderer: deep-space clear driven by the kernel's interpolation alpha.
+  // Per-frame presentation: propagate every catalog body at the warped sim time.
   engine.registerRenderer({
-    render: (alpha: number): void => {
-      gl.clearColor(0.008 + 0.004 * alpha, 0.008, 0.016, 1);
-      gl.clear(gl.COLOR_BUFFER_BIT);
+    render: (): void => {
+      const simulationSeconds = engine.time.snapshot().simulationSeconds;
+      const days = bootEpochDays + simulationSeconds / SECONDS_PER_DAY;
+      scene.syncPositions(heliocentricScenePositions(days, scene.currentMode));
+      scene.render();
     },
   });
 
-  window.addEventListener('resize', managed.resize);
+  // V toggles between the readable compressed view and true scale.
+  window.addEventListener('keydown', (event) => {
+    if (event.repeat || event.key.toLowerCase() !== 'v') return;
+    const next: ScaleMode = scene.currentMode === 'compressed' ? 'true' : 'compressed';
+    scene.setScaleMode(next);
+    console.info(`[solar-system-glm] scale mode: ${next}`);
+  });
+
+  const onResize = (): void => {
+    managed.resize();
+    scene.resize();
+  };
+  window.addEventListener('resize', onResize);
+
   engine.start();
-  console.info(`[solar-system-glm] ${engine.version} kernel online.`);
+  console.info(
+    `[solar-system-glm] ${engine.version} kernel online — 48 bodies rendering. ` +
+      'Drag to orbit, scroll to zoom, V toggles scale mode.',
+  );
 }
 
 boot();
+
 

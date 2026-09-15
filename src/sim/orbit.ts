@@ -86,3 +86,18 @@ export function orbitalPositionAu(elements: OrbitalElements, daysSinceEpoch: num
   };
 }
 
+/**
+ * Sample one full revolution of an orbit as parent-relative ecliptic AU positions.
+ * The loop is closed: point k=segments would coincide with k=0 exactly.
+ */
+export function sampleOrbitAu(
+  elements: OrbitalElements,
+  segments = 180,
+): readonly Vec3[] {
+  const points: Vec3[] = [];
+  for (let k = 0; k < segments; k++) {
+    points.push(orbitalPositionAu(elements, (k / segments) * elements.periodDays));
+  }
+  return points;
+}
+
