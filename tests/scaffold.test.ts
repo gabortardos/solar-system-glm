@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Engine } from '../src/core/engine';
-import { CATALOG_SEED } from '../src/data/catalog';
+import { CELESTIAL_CATALOG, validateCatalog } from '../src/data/catalog';
 import type { OrbitalElements } from '../src/sim/orbit';
 import type { ShipState } from '../src/gameplay/ship';
 import type { LlmProvider } from '../src/knowledge/provider';
@@ -16,16 +16,9 @@ describe('Step 1 — foundation scaffold', () => {
     expect(engine.services).toBeTruthy();
   });
 
-  it('ships a schema-valid catalog seed', () => {
-    expect(CATALOG_SEED.length).toBeGreaterThanOrEqual(2);
-    const ids = new Set<string>();
-    for (const body of CATALOG_SEED) {
-      expect(body.id, 'body id must be non-empty').toBeTruthy();
-      expect(ids.has(body.id), `duplicate id ${body.id}`).toBe(false);
-      ids.add(body.id);
-      expect(body.radiusKm, `${body.id} radius must be positive`).toBeGreaterThan(0);
-      expect(body.summary.length, `${body.id} needs a summary`).toBeGreaterThan(0);
-    }
+  it('ships a schema-valid full catalog', () => {
+    expect(CELESTIAL_CATALOG.length).toBeGreaterThanOrEqual(40);
+    expect(validateCatalog(CELESTIAL_CATALOG)).toEqual([]);
   });
 
   it('declares the layer contracts later steps build on', () => {

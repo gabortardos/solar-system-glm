@@ -1,0 +1,73 @@
+import type { CelestialBodyRecord } from './schema';
+
+/** The four giant planets (approximate J2000 elements). */
+export const OUTER_PLANETS: readonly CelestialBodyRecord[] = [
+  {
+    id: 'jupiter',
+    name: 'Jupiter',
+    kind: 'planet',
+    parentId: 'sun',
+    radiusKm: 69911,
+    colorHex: '#D8A47F',
+    summary: 'The giant of giants: a gas planet 2.5 times more massive than all others combined.',
+    facts: [
+      'The Great Red Spot is a storm wider than Earth, raging 350+ years.',
+      'Shortest day of any planet: under 10 hours.',
+      'Its 95 known moons include four discovered by Galileo in 1610.',
+    ],
+    rotationPeriodHours: 9.925,
+    massKg: 1.898e27,
+    orbit: { semiMajorAxisAu: 5.2029, eccentricity: 0.0484, inclinationDeg: 1.304, periodDays: 4332.59, meanAnomalyDegAtEpoch: 20.02, longitudeOfAscendingNodeDeg: 100.46, argumentOfPeriapsisDeg: 273.87 },
+  },
+  {
+    id: 'saturn',
+    name: 'Saturn',
+    kind: 'planet',
+    parentId: 'sun',
+    radiusKm: 58232,
+    colorHex: '#EAD1AF',
+    summary: 'The ringed jewel: billions of ice chunks orbiting a planet lighter than water.',
+    facts: [
+      'Its rings span 282,000 km yet are only about 10 m thick in places.',
+      'Mean density 0.687 g/cm3 - it would float in a big enough ocean.',
+      'Moon Titan is larger than Mercury and has lakes of liquid methane.',
+    ],
+    rotationPeriodHours: 10.656,
+    massKg: 5.683e26,
+    orbit: { semiMajorAxisAu: 9.5367, eccentricity: 0.0539, inclinationDeg: 2.486, periodDays: 10759.22, meanAnomalyDegAtEpoch: 317.02, longitudeOfAscendingNodeDeg: 113.66, argumentOfPeriapsisDeg: 339.39 },
+  },
+  {
+    id: 'uranus',
+    name: 'Uranus',
+    kind: 'planet',
+    parentId: 'sun',
+    radiusKm: 25362,
+    colorHex: '#9FD6D2',
+    summary: 'The sideways ice giant: it rolls around the Sun tilted at 98 degrees.',
+    facts: [
+      'Axial tilt 98 degrees - each pole gets 42 years of daylight.',
+      'Coldest planetary atmosphere recorded: -224 C.',
+      'Spins retrograde (negative rotation period).',
+    ],
+    rotationPeriodHours: -17.24,
+    massKg: 8.681e25,
+    orbit: { semiMajorAxisAu: 19.189, eccentricity: 0.0473, inclinationDeg: 0.773, periodDays: 30685.4, meanAnomalyDegAtEpoch: 142.24, longitudeOfAscendingNodeDeg: 74.02, argumentOfPeriapsisDeg: 96.99 },
+  },
+  {
+    id: 'neptune',
+    name: 'Neptune',
+    kind: 'planet',
+    parentId: 'sun',
+    radiusKm: 24622,
+    colorHex: '#3F54BA',
+    summary: 'The deep-blue windiest world, discovered by mathematics before anyone saw it.',
+    facts: [
+      'Supersonic winds exceed 2,000 km/h.',
+      'Found in 1846 exactly where calculations predicted.',
+      'One Neptunian year lasts 165 Earth years.',
+    ],
+    rotationPeriodHours: 16.11,
+    massKg: 1.024e26,
+    orbit: { semiMajorAxisAu: 30.0699, eccentricity: 0.0086, inclinationDeg: 1.77, periodDays: 60189, meanAnomalyDegAtEpoch: 256.23, longitudeOfAscendingNodeDeg: 131.78, argumentOfPeriapsisDeg: 276.34 },
+  },
+];
