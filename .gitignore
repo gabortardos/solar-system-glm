@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.vite/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Test & coverage
+coverage/
+
+# OS / editor noise
+.DS_Store
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json
