@@ -30,7 +30,8 @@ src/
 
 - ✅ Steps 1–5: scaffold, engine kernel, 48-body catalog, Kepler propagation, Three.js render foundation (compressed/true scale toggle, **V**)
 - 🚀 Step 6: arcade spaceship flight — W/S pitch, A/D yaw, Q/E roll, R/F throttle, B brake (letter keys only)
-- Planned: time/camera UX, targeting + info overlay + search palette, LLM Q&A pipeline, mobile/touch pass, game-feel polish
+- 🛰️ Step 6.5 (flight UX): minimal navigation HUD (speed, regime, throttle, heading/pitch/bank, nearest body, Sun distance, mission time), chase camera **C** (default) with free-orbit fallback, pause **T**, time warp **N/M**, help & settings panel **H** (warp presets + log slider, scale/camera buttons, full control reference)
+- Planned: targeting + info overlay + search palette, LLM Q&A pipeline, mobile/touch pass, game-feel polish
 
 ## Tech Stack
 

@@ -5,7 +5,7 @@ import {
   quatLookTo,
   quatNormalize,
   quatRotateVector,
-} from '../src/gameplay/quat';
+} from '../src/sim/quat';
 import {
   ShipController,
   SHIP_SPEED_PROFILES,

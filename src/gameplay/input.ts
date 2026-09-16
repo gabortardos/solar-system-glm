@@ -6,7 +6,7 @@
  * setVirtualButton, so no flight code changes when mobile support lands.
  */
 
-import type { ShipInput } from './ship';
+import { NO_INPUT, type ShipInput } from './ship';
 
 export type ShipAction =
   | 'pitchUp' | 'pitchDown'
@@ -53,6 +53,17 @@ export class KeyboardActionMap {
     pitch: number; yaw: number; roll: number;
     throttleUp: boolean; throttleDown: boolean; brake: boolean;
   } = { pitch: 0, yaw: 0, roll: 0, throttleUp: false, throttleDown: false, brake: false };
+  private enabled = true;
+
+  /** Disable while modal UI (help/settings panel) has focus; releases held keys. */
+  setEnabled(on: boolean): void {
+    this.enabled = on;
+    if (!on) this.releaseAll();
+  }
+
+  get isEnabled(): boolean {
+    return this.enabled;
+  }
 
   press(code: string): void {
     const action = ACTION_BY_CODE[code];
@@ -83,6 +94,7 @@ export class KeyboardActionMap {
   }
 
   snapshot(): ShipInput {
+    if (!this.enabled) return NO_INPUT;
     const pitch = (this.down.has('pitchUp') ? 1 : 0) + (this.down.has('pitchDown') ? -1 : 0);
     const yaw = (this.down.has('yawLeft') ? 1 : 0) + (this.down.has('yawRight') ? -1 : 0);
     const roll = (this.down.has('rollRight') ? 1 : 0) + (this.down.has('rollLeft') ? -1 : 0);

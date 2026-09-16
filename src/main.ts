@@ -7,16 +7,30 @@ import { getCelestial } from './data/catalog';
 import { KeyboardActionMap } from './gameplay/input';
 import { ShipController, SHIP_SPEED_PROFILES, type FlightEnvelope } from './gameplay/ship';
 import { createCanvas } from './render/canvas';
+import { chaseCameraPose } from './render/controls';
 import { heliocentricRadiusScene, bodyRadiusScene, sceneToAuDistance, type ScaleMode } from './render/scale';
 import { SolarScene } from './render/scene';
 import { buildShipVisual } from './render/ship';
 import { heliocentricScenePositions } from './render/sync';
-import { daysSinceJ2000 } from './sim/orbit';
+import { J2000_UTC_MS, daysSinceJ2000 } from './sim/orbit';
 import { addVec3, lengthVec3, scaleVec3, type Vec3 } from './sim/vec';
+import { formatDistance } from './ui/format';
+import { createHud } from './ui/hud';
+import { createSettingsPanel, type PanelState } from './ui/panel';
+import { nextWarp } from './ui/warp';
 
 const SECONDS_PER_DAY = 86_400;
+const MS_PER_DAY = 86_400_000;
 /** Ship mesh length per mode: ~1.4 scene units compressed; scaled down in true mode. */
 const SHIP_VISUAL_SCALE: Record<ScaleMode, number> = { compressed: 1, true: 0.004 };
+/** Chase camera eye distance from the ship, per scale mode. */
+const CHASE_DISTANCE: Record<ScaleMode, number> = { compressed: 7, true: 0.03 };
+/** Boot framing: start the free-orbit camera close enough to see the ship. */
+const BOOT_ORBIT_DISTANCE = 9;
+/** HUD DOM refresh cadence (frames); 60/6 = 10 Hz. */
+const HUD_EVERY_FRAMES = 6;
+
+type CameraMode = 'chase' | 'orbit';
 
 function envelopeFor(mode: ScaleMode): FlightEnvelope {
   const sunRadius = bodyRadiusScene(getCelestial('sun')!.radiusKm ?? 696_340, mode);
@@ -61,28 +75,25 @@ function boot(): void {
   const keys = new KeyboardActionMap();
   keys.attach(window);
 
-  engine.register({
-    update: (dtSeconds): void => {
-      ship.update(dtSeconds, keys.snapshot());
-    },
-  });
+  // Start framed on the ship: chase cam by default, free-orbit anchored close by.
+  let cameraMode: CameraMode = 'chase';
+  scene.controls.setTarget(ship.position);
+  scene.controls.setDistance(BOOT_ORBIT_DISTANCE);
 
-  engine.registerRenderer({
-    render: (): void => {
-      const days = bootEpochDays + engine.time.snapshot().simulationSeconds / SECONDS_PER_DAY;
-      scene.syncPositions(heliocentricScenePositions(days, scene.currentMode));
-      shipVisual.sync({ position: ship.position, quaternion: ship.orientation, throttle01: throttle01(ship) });
-      scene.controls.setTarget(ship.position); // free-orbit camera anchored to the ship
-      scene.render();
-    },
-  });
+  const hud = createHud(document.body);
 
-  // V toggles between the readable compressed view and true scale.
-  window.addEventListener('keydown', (event) => {
-    if (event.repeat || event.key.toLowerCase() !== 'v') return;
+  function panelState(): PanelState {
+    return {
+      paused: engine.time.isPaused,
+      warp: engine.time.currentScale,
+      scaleMode: scene.currentMode,
+      cameraMode,
+    };
+  }
+
+  function toggleScale(): void {
     const from = scene.currentMode;
     const next: ScaleMode = from === 'compressed' ? 'true' : 'compressed';
-
     // Radially remap the ship's position and speed into the other mode's units.
     const radius = lengthVec3(ship.position);
     if (radius > 1e-12) {
@@ -91,9 +102,132 @@ function boot(): void {
     }
     ship.setEnvelope(envelopeFor(next));
     shipVisual.setScale(SHIP_VISUAL_SCALE[next]);
-
     scene.setScaleMode(next);
     console.info(`[solar-system-glm] scale mode: ${next}`);
+  }
+
+  function toggleCamera(): void {
+    cameraMode = cameraMode === 'chase' ? 'orbit' : 'chase';
+    if (cameraMode === 'orbit') {
+      scene.setChasePose(null);
+      scene.controls.setTarget(ship.position);
+    }
+  }
+
+  const panel = createSettingsPanel(document.body, {
+    onPauseToggle: (): void => {
+      engine.time.togglePause();
+      panel.update(panelState());
+    },
+    onWarpSet: (warp: number): void => {
+      engine.time.setTimeScale(warp);
+      panel.update(panelState());
+    },
+    onScaleToggle: (): void => {
+      toggleScale();
+      panel.update(panelState());
+    },
+    onCameraToggle: (): void => {
+      toggleCamera();
+      panel.update(panelState());
+    },
+  });
+  panel.update(panelState());
+
+  engine.register({
+    update: (dtSeconds): void => {
+      ship.update(dtSeconds, keys.snapshot());
+    },
+  });
+
+  let frame = 0;
+  engine.registerRenderer({
+    render: (): void => {
+      keys.setEnabled(!panel.isOpen()); // modal settings panel freezes flight input
+      const snap = engine.time.snapshot();
+      const days = bootEpochDays + snap.simulationSeconds / SECONDS_PER_DAY;
+      const positions = heliocentricScenePositions(days, scene.currentMode);
+      scene.syncPositions(positions);
+      shipVisual.sync({
+        position: ship.position,
+        quaternion: ship.orientation,
+        throttle01: throttle01(ship),
+      });
+
+      if (cameraMode === 'chase') {
+        scene.setChasePose(
+          chaseCameraPose(ship.position, ship.orientation, CHASE_DISTANCE[scene.currentMode]),
+        );
+      } else {
+        scene.setChasePose(null);
+        scene.controls.setTarget(ship.position); // free-orbit camera anchored to the ship
+      }
+      scene.render();
+
+      // HUD refresh at ~10 Hz: everything the pilot needs at a glance.
+      if (++frame % HUD_EVERY_FRAMES === 0) {
+        let nearestName = '—';
+        let nearestDistance = Infinity;
+        for (const [id, p] of positions) {
+          const d = lengthVec3(addVec3(p, scaleVec3(ship.position, -1)));
+          if (d < nearestDistance) {
+            nearestDistance = d;
+            nearestName = getCelestial(id)?.name ?? id;
+          }
+        }
+        const mode = scene.currentMode;
+        hud.update({
+          speed: ship.speed,
+          regime: ship.regime,
+          throttle01: throttle01(ship),
+          forward: ship.forward,
+          right: ship.right,
+          scaleMode: mode,
+          cameraMode,
+          sunDistanceAu: sceneToAuDistance(lengthVec3(ship.position), mode),
+          nearestName,
+          nearestDistance: formatDistance(nearestDistance, mode),
+          warp: snap.timeScale,
+          paused: snap.paused,
+          simDate: new Date(J2000_UTC_MS + days * MS_PER_DAY),
+        });
+      }
+    },
+  });
+
+  // Letter-keyed app shortcuts (flight uses its own physical-code map).
+  window.addEventListener('keydown', (event) => {
+    const target = event.target as HTMLElement | null;
+    if (
+      target !== null &&
+      (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+    ) {
+      return; // typing into UI widgets never triggers shortcuts
+    }
+    const key = event.key.toLowerCase();
+
+    if (key === 'n' || key === 'm') {
+      // Time warp down/up — hold to sweep the ladder (auto-repeat allowed).
+      engine.time.setTimeScale(nextWarp(engine.time.currentScale, key === 'm' ? 1 : -1));
+      panel.update(panelState());
+      return;
+    }
+    if (event.repeat) return; // toggles below fire once per keypress
+
+    if (key === 'v') {
+      toggleScale();
+      panel.update(panelState());
+    } else if (key === 't') {
+      engine.time.togglePause();
+      panel.update(panelState());
+    } else if (key === 'c') {
+      toggleCamera();
+      panel.update(panelState());
+    } else if (key === 'h' || key === '?') {
+      panel.toggle();
+    } else if (event.key === 'Escape' && panel.isOpen()) {
+      panel.close();
+    }
   });
 
   const onResize = (): void => {
@@ -104,12 +238,13 @@ function boot(): void {
 
   engine.start();
   console.info(
-    `[solar-system-glm] ${engine.version} kernel online. Fly: W/S pitch, A/D yaw, Q/E roll, ` +
-      'R/F throttle, B brake. Camera: drag/scroll. V toggles scale.',
+    `[solar-system-glm] ${engine.version} kernel online. Chase cam by default: W/S/A/D/Q/E steer, ` +
+      'R/F throttle, B brake. C camera, T pause, N/M time warp, H help, V scale.',
   );
 }
 
 boot();
+
 
 
 

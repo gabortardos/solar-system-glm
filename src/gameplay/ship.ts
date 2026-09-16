@@ -13,7 +13,7 @@ import {
   quatNormalize,
   quatRotateVector,
   type Quat,
-} from './quat';
+} from '../sim/quat';
 
 export type ThrottleRegime = 'orbital' | 'cruise' | 'warp';
 

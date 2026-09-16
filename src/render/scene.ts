@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { CELESTIAL_CATALOG } from '../data/catalog';
 import type { Vec3 } from '../sim/vec';
 import { buildSystemVisuals, disposeVisuals, type SystemVisuals } from './bodies';
-import { OrbitCamera } from './controls';
+import { OrbitCamera, type CameraPose } from './controls';
 import { hashString, mulberry32 } from './rand';
 import type { ScaleMode } from './scale';
 
@@ -25,6 +25,7 @@ export class SolarScene {
 
   private visuals: SystemVisuals | null = null;
   private mode: ScaleMode;
+  private chasePose: CameraPose | null = null;
   private readonly canvas: HTMLCanvasElement;
   private dragging = false;
   private lastX = 0;
@@ -110,6 +111,14 @@ export class SolarScene {
     this.scene.add(object);
   }
 
+  /**
+   * Provide this frame's chase-camera pose, or null to fall back to the
+   * free-orbit camera. Call every frame while in chase mode.
+   */
+  setChasePose(pose: CameraPose | null): void {
+    this.chasePose = pose;
+  }
+
   syncPositions(positions: ReadonlyMap<string, Vec3>): void {
     if (this.visuals === null) return;
     for (const [id, mesh] of this.visuals.meshes) {
@@ -119,10 +128,16 @@ export class SolarScene {
   }
 
   render(): void {
-    const eye = this.controls.position;
-    const target = this.controls.getTarget();
-    this.camera.position.set(eye.x, eye.y, eye.z);
-    this.camera.lookAt(target.x, target.y, target.z);
+    if (this.chasePose !== null) {
+      const pose = this.chasePose;
+      this.camera.position.set(pose.position.x, pose.position.y, pose.position.z);
+      this.camera.lookAt(pose.target.x, pose.target.y, pose.target.z);
+    } else {
+      const eye = this.controls.position;
+      const target = this.controls.getTarget();
+      this.camera.position.set(eye.x, eye.y, eye.z);
+      this.camera.lookAt(target.x, target.y, target.z);
+    }
     this.renderer.render(this.scene, this.camera);
   }
 
