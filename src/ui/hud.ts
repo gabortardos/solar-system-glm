@@ -30,6 +30,8 @@ export interface HudState {
   readonly warp: number;
   readonly paused: boolean;
   readonly simDate: Date;
+  readonly focusName: string | null;
+  readonly focusDistance: string;
 }
 
 export interface Hud {
@@ -93,10 +95,11 @@ export function createHud(container: HTMLElement): Hud {
       <div class="sse-chips"><span data-chip="scale"></span> · <span data-chip="cam"></span></div>
     </div>
     <div class="sse-block sse-nav">
+      <div class="sse-row"><span>FOCUS</span><b data-nav="focus">SHIP</b></div>
       <div class="sse-row"><span>NEAREST</span><b data-nav="nearest">—</b></div>
       <div class="sse-row"><span>SUN</span><b data-nav="sun">—</b></div>
     </div>
-    <div class="sse-hint">H Help · C Camera · T Pause · N/M Time warp · V Scale</div>`;
+    <div class="sse-hint">H Help · K Search · G Focus · C Camera · T Pause · N/M Time · V Scale</div>`;
   container.appendChild(root);
 
   const speedEl = root.querySelector<HTMLElement>('.sse-speed')!;
@@ -110,6 +113,7 @@ export function createHud(container: HTMLElement): Hud {
   const camChip = root.querySelector<HTMLElement>('[data-chip="cam"]')!;
   const nearestEl = root.querySelector<HTMLElement>('[data-nav="nearest"]')!;
   const sunEl = root.querySelector<HTMLElement>('[data-nav="sun"]')!;
+  const focusEl = root.querySelector<HTMLElement>('[data-nav="focus"]')!;
 
   return {
     update(state): void {
@@ -127,6 +131,8 @@ export function createHud(container: HTMLElement): Hud {
       camChip.textContent = `CAM ${state.cameraMode.toUpperCase()}`;
       nearestEl.textContent = `${state.nearestName} · ${state.nearestDistance}`;
       sunEl.textContent = `${state.sunDistanceAu.toFixed(3)} AU`;
+      focusEl.textContent =
+        state.focusName !== null ? `${state.focusName} · ${state.focusDistance}` : 'SHIP';
     },
   };
 }

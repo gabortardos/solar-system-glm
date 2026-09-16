@@ -107,9 +107,12 @@ export class ShipController {
     this.speedValue *= factor;
   }
 
-  teleport(position: Vec3, lookDirection: Vec3): void {
+  teleport(position: Vec3, lookDirection: Vec3, speed?: number): void {
     this.positionValue = position;
     this.orientationValue = quatLookTo(lookDirection, { x: 0, y: 1, z: 0 });
+    if (speed !== undefined) {
+      this.speedValue = Math.min(Math.max(speed, this.envelopeValue.minSpeed), this.envelopeValue.maxSpeed);
+    }
     this.pitchRate = 0;
     this.yawRate = 0;
     this.rollRate = 0;

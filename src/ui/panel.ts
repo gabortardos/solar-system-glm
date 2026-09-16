@@ -12,7 +12,7 @@ export interface PanelState {
   readonly paused: boolean;
   readonly warp: number;
   readonly scaleMode: 'compressed' | 'true';
-  readonly cameraMode: 'chase' | 'orbit';
+  readonly cameraMode: 'chase' | 'orbit' | 'follow';
 }
 
 export interface PanelHandlers {
@@ -71,9 +71,11 @@ const CONTROLS: ReadonlyArray<readonly [string, string]> = [
   ['Q / E', 'Roll left / right'],
   ['R / F', 'Throttle up / down'],
   ['B', 'Brake to full stop'],
-  ['C', 'Camera: chase ↔ free orbit'],
+  ['C', 'Camera: chase ↔ free orbit ↔ follow'],
   ['T', 'Pause / resume time'],
   ['N / M', 'Time warp down / up'],
+  ['G', 'Cycle focus to next body'],
+  ['K', 'Search bodies (focus / fly)'],
   ['V', 'Scale: compressed ↔ true'],
   ['H', 'Toggle this panel'],
   ['Drag', 'Orbit camera (free mode)'],
@@ -166,7 +168,9 @@ export function createSettingsPanel(container: HTMLElement, handlers: PanelHandl
     update(state): void {
       pauseBtn.textContent = state.paused ? 'Resume (T)' : 'Pause (T)';
       scaleBtn.textContent = `Scale: ${state.scaleMode === 'true' ? 'True' : 'Compressed'} (V)`;
-      cameraBtn.textContent = `Camera: ${state.cameraMode === 'chase' ? 'Chase' : 'Free orbit'} (C)`;
+      cameraBtn.textContent = `Camera: ${
+        state.cameraMode === 'chase' ? 'Chase' : state.cameraMode === 'orbit' ? 'Free orbit' : 'Follow body'
+      } (C)`;
       chipButtons.forEach((chip, i) => chip.classList.toggle('on', WARP_LADDER[i] === state.warp));
       const sliderPos = warpToSlider(state.warp);
       if (Number(slider.value) !== sliderPos && document.activeElement !== slider) {

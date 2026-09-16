@@ -63,3 +63,13 @@ export function sceneToAuDistance(sceneUnits: number, mode: ScaleMode): number {
   if (mode === 'true') return sceneUnits;
   return COMPRESS_KNEE_AU * (Math.exp(sceneUnits / COMPRESS_GAIN) - 1);
 }
+
+/**
+ * Camera framing distance for a body of the given scene radius: ~6 radii fills
+ * the view nicely. Compressed mode floors at 2.5 units so tiny bodies stay in
+ * frame alongside their (equally tiny) neighbours.
+ */
+export function framingDistanceScene(bodyRadiusScene: number, mode: ScaleMode): number {
+  const framed = bodyRadiusScene * 6;
+  return mode === 'compressed' ? Math.max(framed, 2.5) : framed;
+}

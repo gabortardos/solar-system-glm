@@ -58,3 +58,48 @@ function nice(value: number): string {
 export function formatDateUtc(date: Date): string {
   return `${date.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
 }
+
+/** Human label for a catalog kind. */
+export function kindLabel(kind: string): string {
+  switch (kind) {
+    case 'star':
+      return 'Star';
+    case 'planet':
+      return 'Planet';
+    case 'dwarf-planet':
+      return 'Dwarf planet';
+    case 'moon':
+      return 'Moon';
+    case 'asteroid':
+      return 'Asteroid';
+    case 'comet':
+      return 'Comet';
+    case 'belt':
+      return 'Belt';
+    default:
+      return kind;
+  }
+}
+
+/** Orbital period: days below a year, years at/above it. */
+export function formatPeriodDays(days: number): string {
+  return days >= 365.25 ? `${(days / 365.25).toFixed(2)} yr` : `${days.toFixed(1)} d`;
+}
+
+/** Rotation period in hours, shown as days past 48h. */
+export function formatRotationHours(hours: number): string {
+  return Math.abs(hours) >= 48 ? `${(hours / 24).toFixed(1)} d` : `${hours.toFixed(1)} h`;
+}
+
+/** Mass in scientific notation: "5.97 × 10^24 kg". */
+export function formatMassKg(kg: number): string {
+  if (!(kg > 0)) return '—';
+  const exponent = Math.floor(Math.log10(kg));
+  const mantissa = kg / 10 ** exponent;
+  return `${mantissa.toFixed(2)} × 10^${exponent} kg`;
+}
+
+/** Mean radius with thousands separators. */
+export function formatRadiusKm(km: number | undefined): string {
+  return km === undefined ? '—' : `${km.toLocaleString('en-US')} km`;
+}

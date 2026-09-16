@@ -3,12 +3,19 @@
  * Layer: root composition root — the ONLY file allowed to wire layers together.
  */
 import { Engine } from './core/engine';
-import { getCelestial } from './data/catalog';
+import { CELESTIAL_CATALOG, getCelestial } from './data/catalog';
 import { KeyboardActionMap } from './gameplay/input';
 import { ShipController, SHIP_SPEED_PROFILES, type FlightEnvelope } from './gameplay/ship';
+import { cycleFocus, focusableBodies, travelArrival } from './gameplay/targeting';
 import { createCanvas } from './render/canvas';
 import { chaseCameraPose } from './render/controls';
-import { heliocentricRadiusScene, bodyRadiusScene, sceneToAuDistance, type ScaleMode } from './render/scale';
+import {
+  heliocentricRadiusScene,
+  bodyRadiusScene,
+  framingDistanceScene,
+  sceneToAuDistance,
+  type ScaleMode,
+} from './render/scale';
 import { SolarScene } from './render/scene';
 import { buildShipVisual } from './render/ship';
 import { heliocentricScenePositions } from './render/sync';
@@ -16,7 +23,9 @@ import { J2000_UTC_MS, daysSinceJ2000 } from './sim/orbit';
 import { addVec3, lengthVec3, scaleVec3, type Vec3 } from './sim/vec';
 import { formatDistance } from './ui/format';
 import { createHud } from './ui/hud';
+import { createInfoOverlay } from './ui/overlay';
 import { createSettingsPanel, type PanelState } from './ui/panel';
+import { createSearchPalette } from './ui/palette';
 import { nextWarp } from './ui/warp';
 
 const SECONDS_PER_DAY = 86_400;
@@ -30,7 +39,7 @@ const BOOT_ORBIT_DISTANCE = 9;
 /** HUD DOM refresh cadence (frames); 60/6 = 10 Hz. */
 const HUD_EVERY_FRAMES = 6;
 
-type CameraMode = 'chase' | 'orbit';
+type CameraMode = 'chase' | 'orbit' | 'follow';
 
 function envelopeFor(mode: ScaleMode): FlightEnvelope {
   const sunRadius = bodyRadiusScene(getCelestial('sun')!.radiusKm ?? 696_340, mode);
@@ -82,6 +91,58 @@ function boot(): void {
 
   const hud = createHud(document.body);
 
+  // --- Focus targeting (Steps 7/8): follow-body camera, info overlay, search & travel.
+  const FOCUS_BODIES = focusableBodies(CELESTIAL_CATALOG);
+  let focusId: string | null = null;
+
+  const overlay = createInfoOverlay(document.body, {
+    onTravel: (id: string): void => travelTo(id),
+  });
+  const palette = createSearchPalette(document.body, {
+    onSelect: (id: string): void => focusBody(id),
+    onTravel: (id: string): void => travelTo(id),
+  });
+
+  function currentDays(): number {
+    return bootEpochDays + engine.time.snapshot().simulationSeconds / SECONDS_PER_DAY;
+  }
+
+  /** Auto-frame the focused body: orbit camera pulled to ~6 body radii. */
+  function frameFocusedBody(): void {
+    const record = focusId !== null ? getCelestial(focusId) : undefined;
+    if (record === undefined) return;
+    const mode = scene.currentMode;
+    scene.controls.setDistance(
+      framingDistanceScene(bodyRadiusScene(record.radiusKm ?? 0, mode), mode),
+    );
+  }
+
+  function focusBody(id: string): void {
+    focusId = id;
+    cameraMode = 'follow';
+    scene.setChasePose(null);
+    frameFocusedBody();
+    overlay.show(id);
+  }
+
+  /** Warp the ship to a standoff near the body, nose aimed at it, then follow it. */
+  function travelTo(id: string): void {
+    const record = getCelestial(id);
+    if (record === undefined) return;
+    const mode = scene.currentMode;
+    const target = heliocentricScenePositions(currentDays(), mode).get(id);
+    if (target === undefined) return;
+    const radiusScene = bodyRadiusScene(record.radiusKm ?? 0, mode);
+    const standoff =
+      mode === 'compressed'
+        ? Math.max(radiusScene * 3, 2.5)
+        : Math.max(radiusScene * 4, radiusScene + 0.002);
+    const plan = travelArrival(target, ship.position, standoff);
+    ship.teleport(plan.position, plan.lookDirection, ship.envelope.maxSpeed * 0.1);
+    focusBody(id);
+    console.info(`[solar-system-glm] warped to ${record.name}`);
+  }
+
   function panelState(): PanelState {
     return {
       paused: engine.time.isPaused,
@@ -107,10 +168,15 @@ function boot(): void {
   }
 
   function toggleCamera(): void {
-    cameraMode = cameraMode === 'chase' ? 'orbit' : 'chase';
+    cameraMode = cameraMode === 'chase' ? 'orbit' : cameraMode === 'orbit' ? 'follow' : 'chase';
     if (cameraMode === 'orbit') {
       scene.setChasePose(null);
       scene.controls.setTarget(ship.position);
+    } else if (cameraMode === 'follow') {
+      if (focusId === null) focusId = 'sun';
+      scene.setChasePose(null);
+      frameFocusedBody();
+      overlay.show(focusId);
     }
   }
 
@@ -143,7 +209,7 @@ function boot(): void {
   let frame = 0;
   engine.registerRenderer({
     render: (): void => {
-      keys.setEnabled(!panel.isOpen()); // modal settings panel freezes flight input
+      keys.setEnabled(!panel.isOpen() && !palette.isOpen()); // modal UI freezes flight input
       const snap = engine.time.snapshot();
       const days = bootEpochDays + snap.simulationSeconds / SECONDS_PER_DAY;
       const positions = heliocentricScenePositions(days, scene.currentMode);
@@ -158,6 +224,10 @@ function boot(): void {
         scene.setChasePose(
           chaseCameraPose(ship.position, ship.orientation, CHASE_DISTANCE[scene.currentMode]),
         );
+      } else if (cameraMode === 'follow' && focusId !== null) {
+        scene.setChasePose(null);
+        const target = positions.get(focusId);
+        if (target !== undefined) scene.controls.setTarget(target); // camera locked on the body
       } else {
         scene.setChasePose(null);
         scene.controls.setTarget(ship.position); // free-orbit camera anchored to the ship
@@ -176,6 +246,18 @@ function boot(): void {
           }
         }
         const mode = scene.currentMode;
+        const focusRecord = focusId !== null ? getCelestial(focusId) : undefined;
+        const focusPos = focusId !== null ? positions.get(focusId) : undefined;
+        const focusDistance =
+          focusPos !== undefined
+            ? formatDistance(lengthVec3(addVec3(focusPos, scaleVec3(ship.position, -1))), mode)
+            : '';
+        if (focusRecord !== undefined && focusPos !== undefined) {
+          overlay.show(focusRecord.id, {
+            sunDistanceAu: sceneToAuDistance(lengthVec3(focusPos), mode),
+            shipDistance: focusDistance,
+          });
+        }
         hud.update({
           speed: ship.speed,
           regime: ship.regime,
@@ -190,6 +272,8 @@ function boot(): void {
           warp: snap.timeScale,
           paused: snap.paused,
           simDate: new Date(J2000_UTC_MS + days * MS_PER_DAY),
+          focusName: focusRecord?.name ?? null,
+          focusDistance,
         });
       }
     },
@@ -223,10 +307,16 @@ function boot(): void {
     } else if (key === 'c') {
       toggleCamera();
       panel.update(panelState());
+    } else if (key === 'g') {
+      focusBody(cycleFocus(focusId, FOCUS_BODIES).id);
+      panel.update(panelState());
+    } else if (key === 'k') {
+      palette.toggle();
     } else if (key === 'h' || key === '?') {
       panel.toggle();
-    } else if (event.key === 'Escape' && panel.isOpen()) {
-      panel.close();
+    } else if (event.key === 'Escape') {
+      if (palette.isOpen()) palette.close();
+      else if (panel.isOpen()) panel.close();
     }
   });
 
@@ -239,7 +329,8 @@ function boot(): void {
   engine.start();
   console.info(
     `[solar-system-glm] ${engine.version} kernel online. Chase cam by default: W/S/A/D/Q/E steer, ` +
-      'R/F throttle, B brake. C camera, T pause, N/M time warp, H help, V scale.',
+      'R/F throttle, B brake. G focus next body, K search, C camera, T pause, N/M time warp, ' +
+      'H help, V scale.',
   );
 }
 
