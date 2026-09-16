@@ -28,8 +28,9 @@ src/
 
 ## Status
 
-🚧 Initialization — Development Roadmap pending approval. See project tracker in repo history
-(one commit per validated development step).
+- ✅ Steps 1–5: scaffold, engine kernel, 48-body catalog, Kepler propagation, Three.js render foundation (compressed/true scale toggle, **V**)
+- 🚀 Step 6: arcade spaceship flight — W/S pitch, A/D yaw, Q/E roll, R/F throttle, B brake (letter keys only)
+- Planned: time/camera UX, targeting + info overlay + search palette, LLM Q&A pipeline, mobile/touch pass, game-feel polish
 
 ## Tech Stack
 

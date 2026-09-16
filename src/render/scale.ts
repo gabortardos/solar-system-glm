@@ -57,3 +57,9 @@ export function bodyRadiusScene(radiusKm: number, mode: ScaleMode): number {
   if (mode === 'true') return radiusKm / KM_PER_AU;
   return Math.max(MIN_BODY_RADIUS_UNITS, RADII_GAIN * Math.sqrt(Math.max(radiusKm, 0)));
 }
+
+/** Inverse of heliocentricRadiusScene: scene units back to AU (exact in both modes). */
+export function sceneToAuDistance(sceneUnits: number, mode: ScaleMode): number {
+  if (mode === 'true') return sceneUnits;
+  return COMPRESS_KNEE_AU * (Math.exp(sceneUnits / COMPRESS_GAIN) - 1);
+}

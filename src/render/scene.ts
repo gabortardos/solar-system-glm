@@ -105,6 +105,11 @@ export class SolarScene {
     this.scene.add(this.visuals.group);
   }
 
+  /** Add an externally-owned object (e.g. the spaceship) to the scene. */
+  attach(object: THREE.Object3D): void {
+    this.scene.add(object);
+  }
+
   syncPositions(positions: ReadonlyMap<string, Vec3>): void {
     if (this.visuals === null) return;
     for (const [id, mesh] of this.visuals.meshes) {
