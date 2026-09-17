@@ -1,13 +1,8 @@
 /**
- * Step 6.5+7 tests — HUD formatting, warp ladder/slider, chase camera math,
- * and modal-input disabling. All pure/headless (DOM modules keep their logic
- * in these pure helpers so no jsdom is needed).
+ * UI tests — HUD formatting and the time-warp ladder/slider. All pure/headless
+ * (DOM modules keep their logic in these pure helpers so no jsdom is needed).
  */
 import { describe, expect, it } from 'vitest';
-import { KeyboardActionMap } from '../src/gameplay/input';
-import { NO_INPUT } from '../src/gameplay/ship';
-import { chaseCameraPose } from '../src/render/controls';
-import { QUAT_IDENTITY, quatFromAxisAngle } from '../src/sim/quat';
 import {
   bankDeg,
   formatDateUtc,
@@ -85,8 +80,8 @@ describe('time-warp ladder and slider', () => {
     for (let i = 1; i < WARP_LADDER.length; i++) {
       expect(WARP_LADDER[i]!).toBeGreaterThan(WARP_LADDER[i - 1]!);
     }
-    expect(WARP_LADDER[0]).toBe(MIN_WARP);
-    expect(WARP_LADDER[WARP_LADDER.length - 1]).toBe(MAX_WARP);
+    expect(WARP_LADDER[0]!).toBe(MIN_WARP);
+    expect(WARP_LADDER[WARP_LADDER.length - 1]!).toBe(MAX_WARP);
   });
 
   it('slider endpoints map to exact warp bounds and stays monotonic', () => {
@@ -100,40 +95,5 @@ describe('time-warp ladder and slider', () => {
       expect(warp).toBeGreaterThanOrEqual(last);
       last = warp;
     }
-  });
-});
-
-describe('chase camera pose', () => {
-  it('sits behind and above an identity-oriented ship, looking ahead', () => {
-    const pose = chaseCameraPose({ x: 0, y: 0, z: 0 }, QUAT_IDENTITY, 10, 2);
-    expect(pose.position.x).toBeCloseTo(0);
-    expect(pose.position.y).toBeCloseTo(2);
-    expect(pose.position.z).toBeCloseTo(10); // behind: nose points -Z
-    expect(pose.target.x).toBeCloseTo(0);
-    expect(pose.target.y).toBeCloseTo(0);
-    expect(pose.target.z).toBeCloseTo(-6); // looks ahead of the nose
-  });
-
-  it('follows a nose-up ship so the camera ends up below and behind', () => {
-    const noseUp = quatFromAxisAngle({ x: 1, y: 0, z: 0 }, Math.PI / 2);
-    const pose = chaseCameraPose({ x: 0, y: 0, z: 0 }, noseUp, 10, 2);
-    expect(pose.position.y).toBeCloseTo(-10); // opposite of forward (+Y)
-    expect(pose.position.z).toBeCloseTo(2); // ship-up (+Z after rotation) * height
-    expect(pose.target.y).toBeCloseTo(6);
-  });
-});
-
-describe('KeyboardActionMap modal disabling', () => {
-  it('snapshot stays neutral while disabled, even with keys held', () => {
-    const map = new KeyboardActionMap();
-    map.press('KeyW');
-    expect(map.snapshot().pitch).toBe(1);
-    map.setEnabled(false);
-    expect(map.snapshot()).toEqual(NO_INPUT);
-    // Disabling releases held keys; re-enabling accepts fresh presses again.
-    map.setEnabled(true);
-    expect(map.snapshot().pitch).toBe(0);
-    map.press('KeyW');
-    expect(map.snapshot().pitch).toBe(1);
   });
 });

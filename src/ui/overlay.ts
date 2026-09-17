@@ -17,12 +17,12 @@ import {
 export interface OverlayLive {
   /** Body's current heliocentric distance, AU. */
   readonly sunDistanceAu: number;
-  /** Formatted scene-space distance from the ship to the body. */
-  readonly shipDistance: string;
+  /** Formatted scene-space distance from the camera eye to the body. */
+  readonly cameraDistance: string;
 }
 
 export interface OverlayHandlers {
-  onTravel(bodyId: string): void;
+  onFocus(bodyId: string): void;
 }
 
 export interface OverlayPanel {
@@ -50,10 +50,10 @@ const CSS = `
   list-style:none}
 .sse-ov-facts li{padding:2px 0;color:#8fa8d8}
 .sse-ov-facts li::before{content:'▸ ';color:#3f7fff}
-.sse-ov-fly{margin-top:12px;width:100%;padding:8px;border-radius:8px;cursor:pointer;
+.sse-ov-focus{margin-top:12px;width:100%;padding:8px;border-radius:8px;cursor:pointer;
   border:1px solid rgba(127,216,255,.4);background:rgba(127,216,255,.1);color:#eaf2ff;
   font-size:12px;letter-spacing:.5px}
-.sse-ov-fly:hover{background:rgba(127,216,255,.2);border-color:#7fd8ff}
+.sse-ov-focus:hover{background:rgba(127,216,255,.2);border-color:#7fd8ff}
 .sse-ov-close{position:absolute;top:8px;right:10px;background:none;border:none;color:#6f88bb;
   cursor:pointer;font-size:14px;display:none}
 .sse-overlay.open .sse-ov-close{display:block}
@@ -77,7 +77,7 @@ export function createInfoOverlay(container: HTMLElement, handlers: OverlayHandl
       <div class="sse-ov-rows"></div>
       <p class="sse-ov-summary"></p>
       <ul class="sse-ov-facts"></ul>
-      <button class="sse-ov-fly" type="button">✈ Fly there</button>
+      <button class="sse-ov-focus" type="button">◎ Focus this body</button>
     </div>`;
   container.appendChild(root);
 
@@ -87,11 +87,12 @@ export function createInfoOverlay(container: HTMLElement, handlers: OverlayHandl
   const rowsEl = root.querySelector<HTMLElement>('.sse-ov-rows')!;
   const summaryEl = root.querySelector<HTMLElement>('.sse-ov-summary')!;
   const factsEl = root.querySelector<HTMLElement>('.sse-ov-facts')!;
-  const flyEl = root.querySelector<HTMLButtonElement>('.sse-ov-fly')!;
+  const focusBtn = root.querySelector<HTMLButtonElement>('.sse-ov-focus')!;
+  const closeBtn = root.querySelector<HTMLButtonElement>('.sse-ov-close')!;
 
   let currentId: string | null = null;
   let sunEl: HTMLElement | null = null;
-  let shipEl: HTMLElement | null = null;
+  let camEl: HTMLElement | null = null;
 
   function row(label: string, value: string): HTMLElement {
     const div = document.createElement('div');
@@ -129,9 +130,9 @@ export function createInfoOverlay(container: HTMLElement, handlers: OverlayHandl
     const sunRow = row('Sun distance', '—');
     rowsEl.append(sunRow);
     sunEl = sunRow.querySelector('b')!;
-    const shipRow = row('Ship distance', '—');
-    rowsEl.append(shipRow);
-    shipEl = shipRow.querySelector('b')!;
+    const camRow = row('Cam distance', '—');
+    rowsEl.append(camRow);
+    camEl = camRow.querySelector('b')!;
 
     summaryEl.textContent = record.summary;
     factsEl.innerHTML = '';
@@ -140,10 +141,10 @@ export function createInfoOverlay(container: HTMLElement, handlers: OverlayHandl
       li.textContent = fact;
       factsEl.appendChild(li);
     }
-    flyEl.onclick = (): void => handlers.onTravel(bodyId);
+    focusBtn.onclick = (): void => handlers.onFocus(bodyId);
   }
 
-  root.querySelector('.sse-ov-close')!.addEventListener('click', () => api.hide());
+  closeBtn.addEventListener('click', () => api.hide());
 
   const api: OverlayPanel = {
     show(bodyId, live): void {
@@ -151,7 +152,7 @@ export function createInfoOverlay(container: HTMLElement, handlers: OverlayHandl
       root.classList.add('open');
       if (live !== undefined) {
         if (sunEl !== null) sunEl.textContent = `${live.sunDistanceAu.toFixed(3)} AU`;
-        if (shipEl !== null) shipEl.textContent = live.shipDistance;
+        if (camEl !== null) camEl.textContent = live.cameraDistance;
       }
     },
     hide(): void {

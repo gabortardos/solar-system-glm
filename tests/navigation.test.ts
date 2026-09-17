@@ -1,12 +1,11 @@
 /**
- * Navigation & discovery tests — focus cycling, travel arrival, framing,
- * teleport speed clamp, info formatters, and search matching (Steps 7/8).
+ * Navigation & discovery tests — focus cycling, framing, info formatters, and
+ * search matching (Steps 7/8).
  */
 
 import { describe, expect, it } from 'vitest';
 import { CELESTIAL_CATALOG, type CelestialBodyRecord } from '../src/data/catalog';
-import { ShipController, SHIP_SPEED_PROFILES } from '../src/gameplay/ship';
-import { cycleFocus, focusableBodies, travelArrival } from '../src/gameplay/targeting';
+import { cycleFocus, focusableBodies } from '../src/gameplay/targeting';
 import { framingDistanceScene } from '../src/render/scale';
 import {
   formatMassKg,
@@ -49,33 +48,6 @@ describe('focus targeting', () => {
   });
 });
 
-describe('travelArrival', () => {
-  /** toEqual treats -0 ≠ 0; normalize signed zeros away (behaviour is identical). */
-  const norm = (v: { x: number; y: number; z: number }): { x: number; y: number; z: number } => ({
-    x: v.x + 0,
-    y: v.y + 0,
-    z: v.z + 0,
-  });
-
-  it('arrives on the ship side of the body at the standoff distance, nose at the body', () => {
-    const plan = travelArrival({ x: 10, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, 2);
-    expect(norm(plan.position)).toEqual({ x: 8, y: 0, z: 0 });
-    expect(norm(plan.lookDirection)).toEqual({ x: 2, y: 0, z: 0 });
-  });
-
-  it('falls back to the anti-sunward side when ship sits on the body', () => {
-    const plan = travelArrival({ x: 10, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }, 2);
-    expect(norm(plan.position)).toEqual({ x: 12, y: 0, z: 0 });
-    expect(norm(plan.lookDirection)).toEqual({ x: -2, y: 0, z: 0 });
-  });
-
-  it('falls back to +X when body and ship are both at the origin', () => {
-    const plan = travelArrival({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, 3);
-    expect(norm(plan.position)).toEqual({ x: 3, y: 0, z: 0 });
-    expect(norm(plan.lookDirection)).toEqual({ x: -3, y: 0, z: 0 });
-  });
-});
-
 describe('framingDistanceScene', () => {
   it('frames at six radii in true mode', () => {
     expect(framingDistanceScene(0.01, 'true')).toBeCloseTo(0.06);
@@ -84,28 +56,6 @@ describe('framingDistanceScene', () => {
   it('floors at 2.5 units in compressed mode for small bodies', () => {
     expect(framingDistanceScene(0.05, 'compressed')).toBe(2.5);
     expect(framingDistanceScene(2, 'compressed')).toBe(12);
-  });
-});
-
-describe('ShipController.teleport speed', () => {
-  const envelope = { ...SHIP_SPEED_PROFILES.compressed, minSunDistance: 5 };
-
-  it('clamps an absurd speed into the envelope', () => {
-    const ship = new ShipController(envelope, {
-      position: { x: 0, y: 0, z: 0 },
-      lookDirection: { x: 1, y: 0, z: 0 },
-    });
-    ship.teleport({ x: 30, y: 0, z: 0 }, { x: -1, y: 0, z: 0 }, 1e9);
-    expect(ship.speed).toBe(envelope.maxSpeed);
-  });
-
-  it('clamps a near-zero speed up to the envelope minimum', () => {
-    const ship = new ShipController(envelope, {
-      position: { x: 0, y: 0, z: 0 },
-      lookDirection: { x: 1, y: 0, z: 0 },
-    });
-    ship.teleport({ x: 30, y: 0, z: 0 }, { x: -1, y: 0, z: 0 }, 1e-6);
-    expect(ship.speed).toBe(envelope.minSpeed);
   });
 });
 

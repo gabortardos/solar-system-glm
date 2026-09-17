@@ -2,7 +2,7 @@
  * UI layer — Help & Settings panel (DOM overlay).
  * A "?"-button opens a card listing controls plus live settings:
  * time warp (the "natural movement speed" of the solar system), pause,
- * scale mode, and camera mode. Pure logic (warp ladder/slider) lives in warp.ts.
+ * scale mode, and body focus. Pure logic (warp ladder/slider) lives in warp.ts.
  */
 
 import { formatWarp } from './format';
@@ -12,14 +12,13 @@ export interface PanelState {
   readonly paused: boolean;
   readonly warp: number;
   readonly scaleMode: 'compressed' | 'true';
-  readonly cameraMode: 'chase' | 'orbit' | 'follow';
 }
 
 export interface PanelHandlers {
   onPauseToggle(): void;
   onWarpSet(warp: number): void;
   onScaleToggle(): void;
-  onCameraToggle(): void;
+  onFocusNext(): void;
 }
 
 export interface SettingsPanel {
@@ -66,20 +65,14 @@ const CSS = `
 `;
 
 const CONTROLS: ReadonlyArray<readonly [string, string]> = [
-  ['W / S', 'Pitch up / down'],
-  ['A / D', 'Yaw left / right'],
-  ['Q / E', 'Roll left / right'],
-  ['R / F', 'Throttle up / down'],
-  ['B', 'Brake to full stop'],
-  ['C', 'Camera: chase ↔ free orbit ↔ follow'],
+  ['Drag', 'Orbit around the focused body'],
+  ['Wheel / Pinch', 'Zoom in / out'],
+  ['G', 'Focus the next body'],
+  ['K', 'Search bodies'],
   ['T', 'Pause / resume time'],
   ['N / M', 'Time warp down / up'],
-  ['G', 'Cycle focus to next body'],
-  ['K', 'Search bodies (focus / fly)'],
   ['V', 'Scale: compressed ↔ true'],
   ['H', 'Toggle this panel'],
-  ['Drag', 'Orbit camera (free mode)'],
-  ['Wheel', 'Zoom'],
 ];
 
 export function createSettingsPanel(container: HTMLElement, handlers: PanelHandlers): SettingsPanel {
@@ -110,7 +103,7 @@ export function createSettingsPanel(container: HTMLElement, handlers: PanelHandl
       <h3>View</h3>
       <div class="sse-section">
         <button class="sse-btn" data-act="scale" type="button">Scale: Compressed (V)</button>
-        <button class="sse-btn" data-act="camera" type="button">Camera: Chase (C)</button>
+        <button class="sse-btn" data-act="focus" type="button">Focus next body (G)</button>
       </div>
       <h3>Controls</h3>
       <div class="sse-section">
@@ -118,7 +111,7 @@ export function createSettingsPanel(container: HTMLElement, handlers: PanelHandl
           ${CONTROLS.map(([k, d]) => `<kbd>${k}</kbd><span>${d}</span>`).join('')}
         </div>
       </div>
-      <div class="sse-foot">Touch controls and body search arrive in an upcoming step.</div>
+      <div class="sse-foot">Touch works: one finger orbits, two fingers pinch-zoom. Tap a search result to fly there.</div>
     </div>`;
   container.append(button, backdrop);
 
@@ -135,13 +128,13 @@ export function createSettingsPanel(container: HTMLElement, handlers: PanelHandl
 
   const pauseBtn = backdrop.querySelector<HTMLButtonElement>('[data-act="pause"]')!;
   const scaleBtn = backdrop.querySelector<HTMLButtonElement>('[data-act="scale"]')!;
-  const cameraBtn = backdrop.querySelector<HTMLButtonElement>('[data-act="camera"]')!;
+  const focusBtn = backdrop.querySelector<HTMLButtonElement>('[data-act="focus"]')!;
   const slider = backdrop.querySelector<HTMLInputElement>('[data-act="slider"]')!;
   const sliderVal = backdrop.querySelector<HTMLElement>('[data-act="slider-val"]')!;
 
   pauseBtn.addEventListener('click', () => handlers.onPauseToggle());
   scaleBtn.addEventListener('click', () => handlers.onScaleToggle());
-  cameraBtn.addEventListener('click', () => handlers.onCameraToggle());
+  focusBtn.addEventListener('click', () => handlers.onFocusNext());
   slider.addEventListener('input', () => handlers.onWarpSet(sliderToWarp(Number(slider.value))));
   backdrop.querySelector('.sse-close')!.addEventListener('click', () => api.close());
   backdrop.addEventListener('click', (e) => {
@@ -168,9 +161,6 @@ export function createSettingsPanel(container: HTMLElement, handlers: PanelHandl
     update(state): void {
       pauseBtn.textContent = state.paused ? 'Resume (T)' : 'Pause (T)';
       scaleBtn.textContent = `Scale: ${state.scaleMode === 'true' ? 'True' : 'Compressed'} (V)`;
-      cameraBtn.textContent = `Camera: ${
-        state.cameraMode === 'chase' ? 'Chase' : state.cameraMode === 'orbit' ? 'Free orbit' : 'Follow body'
-      } (C)`;
       chipButtons.forEach((chip, i) => chip.classList.toggle('on', WARP_LADDER[i] === state.warp));
       const sliderPos = warpToSlider(state.warp);
       if (Number(slider.value) !== sliderPos && document.activeElement !== slider) {

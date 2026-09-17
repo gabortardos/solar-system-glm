@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { Engine } from '../src/core/engine';
 import { CELESTIAL_CATALOG, validateCatalog } from '../src/data/catalog';
 import type { OrbitalElements } from '../src/sim/orbit';
-import { NO_INPUT, type ThrottleRegime } from '../src/gameplay/ship';
 import type { LlmProvider } from '../src/knowledge/provider';
 import type { OverlayPanel } from '../src/ui/overlay';
 
@@ -28,14 +27,10 @@ describe('Step 1 — foundation scaffold', () => {
       inclinationDeg: 0,
       periodDays: 365.256,
     };
-    const shipInput = NO_INPUT;
-    const regime: ThrottleRegime = 'orbital';
     const panel: OverlayPanel = { show: () => undefined, hide: () => undefined };
     const provider: LlmProvider = { answer: async () => 'ok' };
 
     expect(elements.periodDays).toBeCloseTo(365.256, 3);
-    expect(shipInput.brake).toBe(false);
-    expect(regime).toBe('orbital');
     expect(panel).toBeTruthy();
     expect(provider).toBeTruthy();
   });

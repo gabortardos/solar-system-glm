@@ -1,15 +1,15 @@
 # solar-system-glm
 
-An educational, game-like 3D solar system explorer. Pilot a spaceship from Earth through the
-full solar system — planets, moons, dwarf planets, asteroid belts — target any body to open a
-dynamic information overlay, and ask an LLM-powered knowledge pipeline contextual questions
-about what you find.
+An educational, game-like 3D solar system explorer. Jump to any body — planets, moons, dwarf
+planets, asteroid belts — then investigate it up close: orbit around it, zoom from a full disc
+to a close flyby, and open a dynamic information overlay, with an LLM-powered knowledge
+pipeline for contextual questions about what you find.
 
 ## Core Vision
 
-- **Explore:** Controllable spaceship with 6DOF flight and multi-regime throttle (orbital → warp).
+- **Explore:** Focus-first camera — pick a body, then freely orbit, zoom, and circle around it (works on touch).
 - **Learn:** Every celestial body carries rich structured data + a live Q&A layer (LLM pipeline).
-- **Play:** Approach-and-target interaction, flight visuals up close, game feel.
+- **Play:** Discovery overlays, photoreal bodies up close, game feel.
 - **Scale:** Architecture separates the visualization canvas from the data/simulation systems,
   so the core can later serve as a background engine for other 3D games.
 
@@ -21,7 +21,7 @@ src/
   data/        # Celestial catalogs & schemas (pure data, no rendering deps)
   sim/         # Orbital mechanics (Kepler propagation), scale manager
   render/      # Three.js adapter implementing core engine interfaces
-  gameplay/    # Spaceship controller, targeting, interaction rules
+  gameplay/    # Focus targeting & interaction rules
   knowledge/   # LLM provider interface, context pipeline, offline fallback
   ui/          # HUD, information overlay, Q&A chat panel (DOM overlay)
 ```
@@ -29,11 +29,9 @@ src/
 ## Status
 
 - ✅ Steps 1–5: scaffold, engine kernel, 48-body catalog, Kepler propagation, Three.js render foundation (compressed/true scale toggle, **V**)
-- 🚀 Step 6: arcade spaceship flight — W/S pitch, A/D yaw, Q/E roll, R/F throttle, B brake (letter keys only)
-- 🛰️ Step 6.5 (flight UX): minimal navigation HUD (speed, regime, throttle, heading/pitch/bank, nearest body, Sun distance, mission time), chase camera **C** (default) with free-orbit fallback, pause **T**, time warp **N/M**, help & settings panel **H** (warp presets + log slider, scale/camera buttons, full control reference)
-- 🎯 Step 7/8 (targeting & discovery): follow-body camera — **G** cycles focus (auto-framed at ~6 radii), **C** now cycles chase → free orbit → follow; body info overlay (kind, parent, radius, mass, orbital period, rotation, live Sun/ship distances, summary, facts); search palette **K** (ranked name/id/parent matching, ↑/↓ + Enter to focus, ✈ fly); "fly there" teleports the ship to a standoff near the body, nose aimed at it
+- 🧭 Focus-first navigation pivot (supersedes the old Steps 6–8 spaceship): the ship is gone — the camera always investigates the focused body (boots framed on the Moon). Drag or one finger to circle around it, wheel/pinch to zoom (floor hugs the body at ~1.35 radii), **G** focus next body, **K** search palette, info overlay with live Sun/camera distances, pause **T**, time warp **N/M**, help & settings **H** — mobile viewport + gesture-safe canvas included
 - 🌕 Graphics pilot (photoreal Moon): NASA LRO WAC global color mosaic + LOLA laser-altimeter elevation bump on a dense 192×96 sphere, tidally locked spin from its real 655.72 h period, harsh single-source lighting (ambient fill crushed to near-black); maps ship in `public/textures/` (see `CREDITS.md`) — the pattern for upgrading the rest of the catalog body by body
-- Planned: LLM Q&A pipeline, mobile/touch pass, game-feel polish
+- Planned: LLM Q&A pipeline, more photoreal bodies (Earth next), game-feel polish
 
 ## Tech Stack
 

@@ -88,6 +88,18 @@ describe('Step 5 — orbit camera', () => {
     expect(cam.state.distance).toBe(4);
   });
 
+  it('zoomByFactor pinch-zooms by span ratio and clamps to range', () => {
+    const cam = new OrbitCamera({ minDistance: 4, maxDistance: 1600, distance: 100 });
+    cam.zoomByFactor(2); // fingers spread: pull in
+    expect(cam.state.distance).toBeCloseTo(50, 12);
+    cam.zoomByFactor(0.25); // fingers together: push out 4×
+    expect(cam.state.distance).toBeCloseTo(200, 12);
+    cam.zoomByFactor(1e9);
+    expect(cam.state.distance).toBe(4);
+    cam.zoomByFactor(0); // degenerate span: ignored
+    expect(cam.state.distance).toBe(4);
+  });
+
   it('position is target plus spherical offset', () => {
     const cam = new OrbitCamera({
       theta: 0,

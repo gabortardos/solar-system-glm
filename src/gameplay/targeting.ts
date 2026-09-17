@@ -1,11 +1,10 @@
 /**
- * Gameplay layer — focus targeting & travel navigation (Steps 7/8).
- * Pure helpers: which bodies the camera may focus on, focus cycling order,
- * and teleport arrival geometry for "warp there". No DOM, no three.js.
+ * Gameplay layer — focus targeting (Step 7).
+ * Pure helpers: which bodies the camera may focus on and the focus cycling
+ * order. No DOM, no three.js.
  */
 
 import type { CelestialBodyRecord } from '../data/catalog';
-import { addVec3, scaleVec3, type Vec3 } from '../sim/vec';
 
 /**
  * Focusable bodies: everything with a propagated position (the Sun plus all
@@ -33,45 +32,4 @@ export function cycleFocus(
   if (index === -1) return bodies[step > 0 ? 0 : n - 1]!;
   const next = (((index + step) % n) + n) % n;
   return bodies[next]!;
-}
-
-export interface ArrivalPlan {
-  readonly position: Vec3;
-  readonly lookDirection: Vec3;
-}
-
-/**
- * Teleport arrival geometry: `standoffDistance` from the body, on the side the
- * ship currently occupies (approach from where you are); fallback direction is
- * radially away from the Sun, then +X if the body sits exactly at the origin.
- * The nose aims straight at the body.
- */
-export function travelArrival(
-  bodyPosition: Vec3,
-  shipPosition: Vec3,
-  standoffDistance: number,
-): ArrivalPlan {
-  let dx = shipPosition.x - bodyPosition.x;
-  let dy = shipPosition.y - bodyPosition.y;
-  let dz = shipPosition.z - bodyPosition.z;
-  let len = Math.hypot(dx, dy, dz);
-  if (len < 1e-9) {
-    // Ship sits on the body: approach from the anti-sunward side.
-    dx = bodyPosition.x;
-    dy = bodyPosition.y;
-    dz = bodyPosition.z;
-    len = Math.hypot(dx, dy, dz);
-  }
-  if (len < 1e-9) {
-    dx = 1;
-    dy = 0;
-    dz = 0;
-    len = 1;
-  }
-  const k = standoffDistance / len;
-  const offset: Vec3 = { x: dx * k, y: dy * k, z: dz * k };
-  return {
-    position: addVec3(bodyPosition, offset),
-    lookDirection: scaleVec3(offset, -1),
-  };
 }

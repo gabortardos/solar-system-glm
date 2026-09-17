@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Solar System Explorer</title>
     <style>
       html,
@@ -12,6 +12,8 @@
         height: 100%;
         background: #020204;
         overflow: hidden;
+        overscroll-behavior: none;
+        -webkit-tap-highlight-color: transparent;
         font-family: system-ui, -apple-system, sans-serif;
       }
       #app {

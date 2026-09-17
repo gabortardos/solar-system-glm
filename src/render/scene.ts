@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { CELESTIAL_CATALOG } from '../data/catalog';
 import type { Vec3 } from '../sim/vec';
 import { buildSystemVisuals, disposeVisuals, type SystemVisuals } from './bodies';
-import { OrbitCamera, type CameraPose } from './controls';
+import { OrbitCamera } from './controls';
 import { hashString, mulberry32 } from './rand';
 import type { ScaleMode } from './scale';
 import { SHOWCASE_BODY_ID, applyShowcaseDetail, showcaseRotationY } from './showcase';
@@ -26,11 +26,9 @@ export class SolarScene {
 
   private visuals: SystemVisuals | null = null;
   private mode: ScaleMode;
-  private chasePose: CameraPose | null = null;
   private readonly canvas: HTMLCanvasElement;
-  private dragging = false;
-  private lastX = 0;
-  private lastY = 0;
+  /** Active touch/mouse pointers; one drags to orbit, two pinch to zoom. */
+  private readonly pointers = new Map<number, { x: number; y: number }>();
   private readonly onPointerDown: (e: PointerEvent) => void;
   private readonly onPointerMove: (e: PointerEvent) => void;
   private readonly onPointerUp: (e: PointerEvent) => void;
@@ -62,20 +60,31 @@ export class SolarScene {
     this.scene.add(sunLight);
     this.scene.add(SolarScene.buildStarfield(2_600));
 
+    // Touch-first input: one pointer orbits around the focused body, two
+    // pointers pinch-zoom. `touch-action: none` stops the browser from
+    // hijacking the gestures for page scroll/zoom.
+    canvas.style.touchAction = 'none';
     this.onPointerDown = (e): void => {
-      this.dragging = true;
-      this.lastX = e.clientX;
-      this.lastY = e.clientY;
-      canvas.setPointerCapture(e.pointerId);
+      this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (!canvas.hasPointerCapture(e.pointerId)) canvas.setPointerCapture(e.pointerId);
     };
     this.onPointerMove = (e): void => {
-      if (!this.dragging) return;
-      this.controls.rotate(e.clientX - this.lastX, e.clientY - this.lastY);
-      this.lastX = e.clientX;
-      this.lastY = e.clientY;
+      const prev = this.pointers.get(e.pointerId);
+      if (prev === undefined) return;
+      if (this.pointers.size === 1) {
+        this.controls.rotate(e.clientX - prev.x, e.clientY - prev.y);
+      } else if (this.pointers.size >= 2) {
+        // Pinch: zoom by how much the finger span grew since the last move.
+        const other = [...this.pointers.entries()].find(([id]) => id !== e.pointerId)!;
+        const spanPrev = Math.hypot(prev.x - other[1].x, prev.y - other[1].y);
+        const spanNow = Math.hypot(e.clientX - other[1].x, e.clientY - other[1].y);
+        if (spanPrev > 0) this.controls.zoomByFactor(spanNow / spanPrev);
+      }
+      prev.x = e.clientX;
+      prev.y = e.clientY;
     };
     this.onPointerUp = (e): void => {
-      this.dragging = false;
+      this.pointers.delete(e.pointerId);
       if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
     };
     this.onWheel = (e): void => {
@@ -85,6 +94,7 @@ export class SolarScene {
     canvas.addEventListener('pointerdown', this.onPointerDown);
     canvas.addEventListener('pointermove', this.onPointerMove);
     canvas.addEventListener('pointerup', this.onPointerUp);
+    canvas.addEventListener('pointercancel', this.onPointerUp);
     canvas.addEventListener('wheel', this.onWheel, { passive: false });
 
     this.setScaleMode(initialMode);
@@ -111,17 +121,19 @@ export class SolarScene {
     this.scene.add(this.visuals.group);
   }
 
-  /** Add an externally-owned object (e.g. the spaceship) to the scene. */
-  attach(object: THREE.Object3D): void {
-    this.scene.add(object);
-  }
-
   /**
-   * Provide this frame's chase-camera pose, or null to fall back to the
-   * free-orbit camera. Call every frame while in chase mode.
+   * Point the orbit camera at a body and frame it for investigation: the zoom
+   * floor hugs the body (~1.35 radii), the near plane is tightened so close
+   * orbits of small bodies never clip, and the eye lands at `framingDistance`.
+   * Callers re-target every frame as the body moves along its orbit.
    */
-  setChasePose(pose: CameraPose | null): void {
-    this.chasePose = pose;
+  frameBody(target: Vec3, bodyRadiusScene: number, framingDistance: number): void {
+    const minDistance = Math.max(bodyRadiusScene * 1.35, 1e-6);
+    this.controls.setRange(minDistance, CAMERA_RANGES[this.mode].max);
+    this.controls.setTarget(target);
+    this.controls.setDistance(framingDistance);
+    this.camera.near = Math.min(this.mode === 'true' ? 2e-5 : 0.1, minDistance * 0.4);
+    this.camera.updateProjectionMatrix();
   }
 
   syncPositions(positions: ReadonlyMap<string, Vec3>, simDays: number): void {
@@ -136,16 +148,10 @@ export class SolarScene {
   }
 
   render(): void {
-    if (this.chasePose !== null) {
-      const pose = this.chasePose;
-      this.camera.position.set(pose.position.x, pose.position.y, pose.position.z);
-      this.camera.lookAt(pose.target.x, pose.target.y, pose.target.z);
-    } else {
-      const eye = this.controls.position;
-      const target = this.controls.getTarget();
-      this.camera.position.set(eye.x, eye.y, eye.z);
-      this.camera.lookAt(target.x, target.y, target.z);
-    }
+    const eye = this.controls.position;
+    const target = this.controls.getTarget();
+    this.camera.position.set(eye.x, eye.y, eye.z);
+    this.camera.lookAt(target.x, target.y, target.z);
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -161,6 +167,7 @@ export class SolarScene {
     this.canvas.removeEventListener('pointerdown', this.onPointerDown);
     this.canvas.removeEventListener('pointermove', this.onPointerMove);
     this.canvas.removeEventListener('pointerup', this.onPointerUp);
+    this.canvas.removeEventListener('pointercancel', this.onPointerUp);
     this.canvas.removeEventListener('wheel', this.onWheel);
     if (this.visuals !== null) disposeVisuals(this.visuals);
     this.renderer.dispose();

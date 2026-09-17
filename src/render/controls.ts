@@ -4,8 +4,7 @@
  * The scene applies `position`/`target` to the real camera each frame.
  */
 
-import { quatRotateVector, type Quat } from '../sim/quat';
-import { addVec3, scaleVec3, type Vec3 } from '../sim/vec';
+import type { Vec3 } from '../sim/vec';
 
 export interface OrbitCameraOptions {
   readonly minDistance?: number;
@@ -57,6 +56,15 @@ export class OrbitCamera {
     );
   }
 
+  /**
+   * Pinch-to-zoom: `factor` is the ratio of the new finger span to the previous
+   * one. Fingers apart (> 1) pull in; fingers together (< 1) push out.
+   */
+  zoomByFactor(factor: number): void {
+    if (factor <= 0) return;
+    this.distance = clamp(this.distance / factor, this.minDistance, this.maxDistance);
+  }
+
   setRange(minDistance: number, maxDistance: number): void {
     this.minDistance = minDistance;
     this.maxDistance = Math.max(maxDistance, minDistance);
@@ -91,26 +99,3 @@ export class OrbitCamera {
   }
 }
 
-/** A full camera placement: eye position plus the point it looks at. */
-export interface CameraPose {
-  readonly position: Vec3;
-  readonly target: Vec3;
-}
-
-/**
- * Chase camera: sit behind and slightly above the ship, looking ahead of the nose.
- * Pure math — the scene applies the pose to the real camera each frame.
- */
-export function chaseCameraPose(
-  shipPosition: Vec3,
-  shipOrientation: Quat,
-  distance: number,
-  height = 1.4,
-): CameraPose {
-  const forward = quatRotateVector(shipOrientation, { x: 0, y: 0, z: -1 });
-  const up = quatRotateVector(shipOrientation, { x: 0, y: 1, z: 0 });
-  return {
-    position: addVec3(addVec3(shipPosition, scaleVec3(forward, -distance)), scaleVec3(up, height)),
-    target: addVec3(shipPosition, scaleVec3(forward, distance * 0.6)),
-  };
-}

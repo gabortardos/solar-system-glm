@@ -1,7 +1,7 @@
 /**
  * UI layer — body search palette (K).
- * Top-center command bar: type to filter, ↑/↓ + Enter (or click) to focus a
- * body, the ✈ button warps the ship there. Matching logic lives in search.ts.
+ * Top-center command bar: type to filter, ↑/↓ + Enter (or tap) to focus a
+ * body — the camera flies to frame it. Matching logic lives in search.ts.
  */
 
 import { CELESTIAL_CATALOG } from '../data/catalog';
@@ -9,7 +9,6 @@ import { buildSearchEntries, matchBodies, type SearchEntry } from './search';
 
 export interface PaletteHandlers {
   onSelect(bodyId: string): void;
-  onTravel(bodyId: string): void;
 }
 
 export interface SearchPalette {
@@ -35,10 +34,6 @@ const CSS = `
 .sse-pal-row.on{background:rgba(127,216,255,.12)}
 .sse-pal-name{color:#eaf2ff;font-size:14px}
 .sse-pal-sub{color:#7f9cd8;font-size:11px}
-.sse-pal-fly{margin-left:auto;flex:none;padding:4px 9px;border-radius:7px;font-size:11px;
-  border:1px solid rgba(127,216,255,.35);background:rgba(127,216,255,.08);color:#cfe3ff;
-  cursor:pointer}
-.sse-pal-fly:hover{border-color:#7fd8ff;background:rgba(127,216,255,.18)}
 .sse-pal-empty{padding:12px;color:#6f88bb;font-size:12px}
 `;
 
@@ -53,7 +48,7 @@ export function createSearchPalette(container: HTMLElement, handlers: PaletteHan
   backdrop.className = 'sse-pal-backdrop';
   backdrop.innerHTML = `
     <div class="sse-pal">
-      <input type="text" placeholder="Search bodies — Enter to focus, ✈ to fly there" autocomplete="off" spellcheck="false" />
+      <input type="text" placeholder="Search bodies — Enter or tap to focus" autocomplete="off" spellcheck="false" />
       <ul class="sse-pal-list"></ul>
     </div>`;
   container.appendChild(backdrop);
@@ -83,16 +78,7 @@ export function createSearchPalette(container: HTMLElement, handlers: PaletteHan
       const sub = document.createElement('span');
       sub.className = 'sse-pal-sub';
       sub.textContent = entry.parentName !== '' ? `${entry.kind} · ${entry.parentName}` : entry.kind;
-      const fly = document.createElement('button');
-      fly.className = 'sse-pal-fly';
-      fly.type = 'button';
-      fly.textContent = '✈ fly';
-      fly.addEventListener('click', (e) => {
-        e.stopPropagation();
-        api.close();
-        handlers.onTravel(entry.id);
-      });
-      li.append(name, sub, fly);
+      li.append(name, sub);
       li.addEventListener('click', () => {
         api.close();
         handlers.onSelect(entry.id);
