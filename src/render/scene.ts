@@ -11,6 +11,7 @@ import { buildSystemVisuals, disposeVisuals, type SystemVisuals } from './bodies
 import { OrbitCamera, type CameraPose } from './controls';
 import { hashString, mulberry32 } from './rand';
 import type { ScaleMode } from './scale';
+import { SHOWCASE_BODY_ID, applyShowcaseDetail, showcaseRotationY } from './showcase';
 
 const CAMERA_RANGES: Record<ScaleMode, { readonly min: number; readonly max: number }> = {
   compressed: { min: 4, max: 1_600 },
@@ -54,7 +55,9 @@ export class SolarScene {
       theta: 0.65,
     });
 
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.28));
+    // Space is harsh: near-zero fill keeps night sides black and terminators
+    // sharp — the single biggest realism lever for airless, sunlit worlds.
+    this.scene.add(new THREE.AmbientLight(0xffffff, 0.05));
     const sunLight = new THREE.PointLight(0xfff2d5, 2.2, 0, 0); // zero decay: reaches the Kuiper belt
     this.scene.add(sunLight);
     this.scene.add(SolarScene.buildStarfield(2_600));
@@ -103,6 +106,8 @@ export class SolarScene {
       disposeVisuals(this.visuals);
     }
     this.visuals = buildSystemVisuals(CELESTIAL_CATALOG, mode);
+    const showcaseMesh = this.visuals.meshes.get(SHOWCASE_BODY_ID);
+    if (showcaseMesh !== undefined) applyShowcaseDetail(showcaseMesh, mode, this.renderer);
     this.scene.add(this.visuals.group);
   }
 
@@ -119,12 +124,15 @@ export class SolarScene {
     this.chasePose = pose;
   }
 
-  syncPositions(positions: ReadonlyMap<string, Vec3>): void {
+  syncPositions(positions: ReadonlyMap<string, Vec3>, simDays: number): void {
     if (this.visuals === null) return;
     for (const [id, mesh] of this.visuals.meshes) {
       const p = positions.get(id);
       if (p !== undefined) mesh.position.set(p.x, p.y, p.z);
     }
+    // Showcase body spins at its real catalog period (tidally locked Moon).
+    const showcase = this.visuals.meshes.get(SHOWCASE_BODY_ID);
+    if (showcase !== undefined) showcase.rotation.y = showcaseRotationY(simDays);
   }
 
   render(): void {

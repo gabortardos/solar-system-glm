@@ -32,6 +32,7 @@ src/
 - 🚀 Step 6: arcade spaceship flight — W/S pitch, A/D yaw, Q/E roll, R/F throttle, B brake (letter keys only)
 - 🛰️ Step 6.5 (flight UX): minimal navigation HUD (speed, regime, throttle, heading/pitch/bank, nearest body, Sun distance, mission time), chase camera **C** (default) with free-orbit fallback, pause **T**, time warp **N/M**, help & settings panel **H** (warp presets + log slider, scale/camera buttons, full control reference)
 - 🎯 Step 7/8 (targeting & discovery): follow-body camera — **G** cycles focus (auto-framed at ~6 radii), **C** now cycles chase → free orbit → follow; body info overlay (kind, parent, radius, mass, orbital period, rotation, live Sun/ship distances, summary, facts); search palette **K** (ranked name/id/parent matching, ↑/↓ + Enter to focus, ✈ fly); "fly there" teleports the ship to a standoff near the body, nose aimed at it
+- 🌕 Graphics pilot (photoreal Moon): NASA LRO WAC global color mosaic + LOLA laser-altimeter elevation bump on a dense 192×96 sphere, tidally locked spin from its real 655.72 h period, harsh single-source lighting (ambient fill crushed to near-black); maps ship in `public/textures/` (see `CREDITS.md`) — the pattern for upgrading the rest of the catalog body by body
 - Planned: LLM Q&A pipeline, mobile/touch pass, game-feel polish
 
 ## Tech Stack

@@ -10,6 +10,11 @@ import type { Vec3 } from '../sim/vec';
 import { orbitSceneOffset } from './sync';
 import { bodyRadiusScene, heliocentricRadiusScene, type ScaleMode } from './scale';
 import { hashString, mulberry32 } from './rand';
+import {
+  SHOWCASE_BODY_ID,
+  SHOWCASE_HEIGHT_SEGMENTS,
+  SHOWCASE_WIDTH_SEGMENTS,
+} from './showcase';
 
 export interface SystemVisuals {
   readonly group: THREE.Group;
@@ -77,14 +82,18 @@ export function buildSystemVisuals(
       continue;
     }
     const radius = bodyRadiusScene(body.radiusKm ?? 1, mode);
-    const geometry = new THREE.SphereGeometry(radius, 32, 16);
+    const isShowcase = body.id === SHOWCASE_BODY_ID;
+    const geometry = isShowcase
+      ? new THREE.SphereGeometry(radius, SHOWCASE_WIDTH_SEGMENTS, SHOWCASE_HEIGHT_SEGMENTS)
+      : new THREE.SphereGeometry(radius, 32, 16);
     const material =
       body.kind === 'star'
         ? new THREE.MeshBasicMaterial({ color: new THREE.Color(body.colorHex) })
         : new THREE.MeshStandardMaterial({
             color: new THREE.Color(body.colorHex),
-            roughness: 0.85,
-            metalness: 0.05,
+            // Showcase body: dry regolith — matte, zero metal.
+            roughness: isShowcase ? 0.97 : 0.85,
+            metalness: isShowcase ? 0 : 0.05,
           });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.userData.bodyId = body.id;

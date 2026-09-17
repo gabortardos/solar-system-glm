@@ -213,7 +213,7 @@ function boot(): void {
       const snap = engine.time.snapshot();
       const days = bootEpochDays + snap.simulationSeconds / SECONDS_PER_DAY;
       const positions = heliocentricScenePositions(days, scene.currentMode);
-      scene.syncPositions(positions);
+      scene.syncPositions(positions, days);
       shipVisual.sync({
         position: ship.position,
         quaternion: ship.orientation,
