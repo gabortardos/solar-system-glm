@@ -29,7 +29,7 @@ src/
 ## Status
 
 - ✅ Steps 1–5: scaffold, engine kernel, 48-body catalog, Kepler propagation, Three.js render foundation (compressed/true scale toggle, **V**)
-- 🧭 Focus-first navigation pivot (supersedes the old Steps 6–8 spaceship): the ship is gone — the camera always investigates the focused body (boots framed on the Moon). Drag or one finger to circle around it, wheel/pinch to zoom (floor hugs the body at ~1.35 radii), **G** focus next body, **K** search palette, info overlay with live Sun/camera distances, pause **T**, time warp **N/M**, help & settings **H** — mobile viewport + gesture-safe canvas included
+- 🧭 Focus-first navigation pivot (supersedes the old Steps 6–8 spaceship): the ship is gone — the camera always investigates the focused body (boots framed on the Moon). Drag or one finger to circle around it, wheel/pinch to zoom (floor hugs the body at ~1.35 radii), **G** focus next body, **S** toggle whole-system overview ↔ focused-body view, **K** search palette, info overlay with live Sun/camera distances, pause **T**, time warp **N/M**, help & settings **H** — mobile viewport + gesture-safe canvas included
 - 🌕 Graphics pilot (photoreal Moon): NASA LRO WAC global color mosaic + LOLA laser-altimeter elevation bump on a dense 192×96 sphere, tidally locked spin from its real 655.72 h period, harsh single-source lighting (ambient fill crushed to near-black); maps ship in `public/textures/` (see `CREDITS.md`) — the pattern for upgrading the rest of the catalog body by body
 - Planned: LLM Q&A pipeline, more photoreal bodies (Earth next), game-feel polish
 

@@ -73,3 +73,16 @@ export function framingDistanceScene(bodyRadiusScene: number, mode: ScaleMode): 
   const framed = bodyRadiusScene * 6;
   return mode === 'compressed' ? Math.max(framed, 2.5) : framed;
 }
+
+/**
+ * Safety margin for whole-system framing: the vertical 60° FOV needs
+ * 1/tan(30°) ≈ 1.73× the outermost orbit; portrait phones have a narrower
+ * horizontal FOV (up to ~3.5× at half-wide aspect). 2.4 keeps the full system
+ * legible on both without pushing it off desktop screens.
+ */
+export const SYSTEM_VIEW_MARGIN = 2.4;
+
+/** Camera distance that frames every orbit around the Sun at once. */
+export function systemFramingDistanceScene(outermostAphelionAu: number, mode: ScaleMode): number {
+  return heliocentricRadiusScene(outermostAphelionAu, mode) * SYSTEM_VIEW_MARGIN;
+}

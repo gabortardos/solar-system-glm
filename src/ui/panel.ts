@@ -12,6 +12,7 @@ export interface PanelState {
   readonly paused: boolean;
   readonly warp: number;
   readonly scaleMode: 'compressed' | 'true';
+  readonly viewMode: 'body' | 'system';
 }
 
 export interface PanelHandlers {
@@ -19,6 +20,7 @@ export interface PanelHandlers {
   onWarpSet(warp: number): void;
   onScaleToggle(): void;
   onFocusNext(): void;
+  onViewToggle(): void;
 }
 
 export interface SettingsPanel {
@@ -68,6 +70,7 @@ const CONTROLS: ReadonlyArray<readonly [string, string]> = [
   ['Drag', 'Orbit around the focused body'],
   ['Wheel / Pinch', 'Zoom in / out'],
   ['G', 'Focus the next body'],
+  ['S', 'Whole-system view ↔ focused body'],
   ['K', 'Search bodies'],
   ['T', 'Pause / resume time'],
   ['N / M', 'Time warp down / up'],
@@ -103,6 +106,7 @@ export function createSettingsPanel(container: HTMLElement, handlers: PanelHandl
       <h3>View</h3>
       <div class="sse-section">
         <button class="sse-btn" data-act="scale" type="button">Scale: Compressed (V)</button>
+        <button class="sse-btn" data-act="view" type="button">View: Body (S)</button>
         <button class="sse-btn" data-act="focus" type="button">Focus next body (G)</button>
       </div>
       <h3>Controls</h3>
@@ -111,7 +115,7 @@ export function createSettingsPanel(container: HTMLElement, handlers: PanelHandl
           ${CONTROLS.map(([k, d]) => `<kbd>${k}</kbd><span>${d}</span>`).join('')}
         </div>
       </div>
-      <div class="sse-foot">Touch works: one finger orbits, two fingers pinch-zoom. Tap a search result to fly there.</div>
+      <div class="sse-foot">Touch works: one finger orbits, two fingers pinch-zoom. Tap a search result to focus it.</div>
     </div>`;
   container.append(button, backdrop);
 
@@ -128,12 +132,14 @@ export function createSettingsPanel(container: HTMLElement, handlers: PanelHandl
 
   const pauseBtn = backdrop.querySelector<HTMLButtonElement>('[data-act="pause"]')!;
   const scaleBtn = backdrop.querySelector<HTMLButtonElement>('[data-act="scale"]')!;
+  const viewBtn = backdrop.querySelector<HTMLButtonElement>('[data-act="view"]')!;
   const focusBtn = backdrop.querySelector<HTMLButtonElement>('[data-act="focus"]')!;
   const slider = backdrop.querySelector<HTMLInputElement>('[data-act="slider"]')!;
   const sliderVal = backdrop.querySelector<HTMLElement>('[data-act="slider-val"]')!;
 
   pauseBtn.addEventListener('click', () => handlers.onPauseToggle());
   scaleBtn.addEventListener('click', () => handlers.onScaleToggle());
+  viewBtn.addEventListener('click', () => handlers.onViewToggle());
   focusBtn.addEventListener('click', () => handlers.onFocusNext());
   slider.addEventListener('input', () => handlers.onWarpSet(sliderToWarp(Number(slider.value))));
   backdrop.querySelector('.sse-close')!.addEventListener('click', () => api.close());
@@ -161,6 +167,7 @@ export function createSettingsPanel(container: HTMLElement, handlers: PanelHandl
     update(state): void {
       pauseBtn.textContent = state.paused ? 'Resume (T)' : 'Pause (T)';
       scaleBtn.textContent = `Scale: ${state.scaleMode === 'true' ? 'True' : 'Compressed'} (V)`;
+      viewBtn.textContent = `View: ${state.viewMode === 'system' ? 'System' : 'Body'} (S)`;
       chipButtons.forEach((chip, i) => chip.classList.toggle('on', WARP_LADDER[i] === state.warp));
       const sliderPos = warpToSlider(state.warp);
       if (Number(slider.value) !== sliderPos && document.activeElement !== slider) {

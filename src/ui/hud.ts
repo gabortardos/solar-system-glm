@@ -8,6 +8,7 @@ import { formatDateUtc, formatWarp, type SceneUnitsMode } from './format';
 
 export interface HudState {
   readonly scaleMode: SceneUnitsMode;
+  readonly viewMode: 'body' | 'system';
   readonly warp: number;
   readonly paused: boolean;
   readonly simDate: Date;
@@ -57,20 +58,21 @@ export function createHud(container: HTMLElement): Hud {
       <div class="sse-date">—</div>
       <div class="sse-warp">1×</div>
       <div class="sse-paused">PAUSED</div>
-      <div class="sse-chips"><span data-chip="scale"></span></div>
+      <div class="sse-chips"><span data-chip="scale"></span> <span data-chip="view"></span></div>
     </div>
     <div class="sse-block sse-nav">
       <div class="sse-row"><span>FOCUS</span><b data-nav="focus">—</b></div>
       <div class="sse-row"><span>CAMERA</span><b data-nav="cam">—</b></div>
       <div class="sse-row"><span>SUN</span><b data-nav="sun">—</b></div>
     </div>
-    <div class="sse-hint">Drag orbit · Pinch/Scroll zoom · G Focus · K Search · T Pause · N/M Time · V Scale · H Help</div>`;
+    <div class="sse-hint">Drag orbit · Pinch/Scroll zoom · G Focus · S System · K Search · T Pause · N/M Time · V Scale · H Help</div>`;
   container.appendChild(root);
 
   const dateEl = root.querySelector<HTMLElement>('.sse-date')!;
   const warpEl = root.querySelector<HTMLElement>('.sse-warp')!;
   const pausedEl = root.querySelector<HTMLElement>('.sse-paused')!;
   const scaleChip = root.querySelector<HTMLElement>('[data-chip="scale"]')!;
+  const viewChip = root.querySelector<HTMLElement>('[data-chip="view"]')!;
   const sunEl = root.querySelector<HTMLElement>('[data-nav="sun"]')!;
   const camEl = root.querySelector<HTMLElement>('[data-nav="cam"]')!;
   const focusEl = root.querySelector<HTMLElement>('[data-nav="focus"]')!;
@@ -81,6 +83,7 @@ export function createHud(container: HTMLElement): Hud {
       warpEl.textContent = `WARP ${formatWarp(state.warp)}`;
       pausedEl.className = `sse-paused${state.paused ? ' on' : ''}`;
       scaleChip.textContent = `SCALE ${state.scaleMode.toUpperCase()}`;
+      viewChip.textContent = state.viewMode === 'system' ? 'VIEW ● SYSTEM' : 'VIEW ◎ BODY';
       sunEl.textContent = `${state.sunDistanceAu.toFixed(3)} AU`;
       camEl.textContent = state.focusDistance;
       focusEl.textContent = state.focusName ?? '—';

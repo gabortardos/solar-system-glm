@@ -15,6 +15,7 @@ import {
   bodyRadiusScene,
   framingDistanceScene,
   sceneToAuDistance,
+  systemFramingDistanceScene,
   type ScaleMode,
 } from './render/scale';
 import { SolarScene } from './render/scene';
@@ -35,6 +36,19 @@ const HUD_EVERY_FRAMES = 6;
 /** Boot focus: the showcase body — the photoreal Moon. */
 const BOOT_FOCUS_ID = 'moon';
 
+/** Camera framing mode: investigating one body vs the whole-system overview. */
+type ViewMode = 'body' | 'system';
+
+/**
+ * Outermost heliocentric aphelion (a·(1+e)) across the catalog — the radius
+ * the whole-system view must fit in frame (Eris wins: a ≈ 67.8 AU, e ≈ 0.44).
+ */
+const MAX_APHELION_AU = Math.max(
+  ...CELESTIAL_CATALOG.filter((b) => b.parentId === 'sun' && b.orbit !== undefined).map(
+    (b) => b.orbit!.semiMajorAxisAu * (1 + b.orbit!.eccentricity),
+  ),
+);
+
 function boot(): void {
   const host = document.querySelector<HTMLElement>('#app');
   if (!host) {
@@ -52,6 +66,7 @@ function boot(): void {
   const FOCUS_BODIES = focusableBodies(CELESTIAL_CATALOG);
 
   let focusId = BOOT_FOCUS_ID;
+  let view: ViewMode = 'body';
   let frame = 0;
 
   function currentDays(): number {
@@ -67,6 +82,7 @@ function boot(): void {
     const record = getCelestial(id);
     if (record === undefined) return;
     focusId = id;
+    view = 'body'; // focusing always drops back into body investigation
     const mode = scene.currentMode;
     const radius = focusRadiusScene(id, mode);
     const position = heliocentricScenePositions(currentDays(), mode).get(id);
@@ -77,18 +93,34 @@ function boot(): void {
 
   function panelState(): PanelState {
     const snap = engine.time.snapshot();
-    return { paused: snap.paused, warp: snap.timeScale, scaleMode: scene.currentMode };
+    return { paused: snap.paused, warp: snap.timeScale, scaleMode: scene.currentMode, viewMode: view };
   }
 
   function toggleScale(): void {
     scene.setScaleMode(scene.currentMode === 'compressed' ? 'true' : 'compressed');
-    focusBody(focusId); // re-frame at the new scale's units
+    // Re-frame in the new scale's units, keeping whichever view the user is in.
+    if (view === 'system') {
+      scene.frameSystemView(systemFramingDistanceScene(MAX_APHELION_AU, scene.currentMode));
+    } else {
+      focusBody(focusId);
+    }
+  }
+
+  /** Toggle between body investigation and the whole-system overview. */
+  function toggleView(): void {
+    if (view === 'system') {
+      focusBody(focusId); // re-frames the focused body and flips view back
+    } else {
+      view = 'system';
+      scene.frameSystemView(systemFramingDistanceScene(MAX_APHELION_AU, scene.currentMode));
+    }
   }
 
   const hud = createHud(host);
   const overlay = createInfoOverlay(host, {
     onFocus(bodyId): void {
       focusBody(bodyId);
+      panel.update(panelState());
     },
   });
   const panel = createSettingsPanel(host, {
@@ -108,11 +140,16 @@ function boot(): void {
       focusBody(cycleFocus(focusId, FOCUS_BODIES).id);
       panel.update(panelState());
     },
+    onViewToggle: () => {
+      toggleView();
+      panel.update(panelState());
+    },
   });
   panel.update(panelState());
   const palette = createSearchPalette(host, {
     onSelect(bodyId): void {
       focusBody(bodyId);
+      panel.update(panelState());
     },
   });
 
@@ -125,9 +162,10 @@ function boot(): void {
       const positions = heliocentricScenePositions(days, mode);
       scene.syncPositions(positions, days);
 
-      // The camera rides along with the focused body as it orbits.
+      // In body view the camera rides along with the focused body as it
+      // orbits; in system view it stays parked on the Sun at the origin.
       const focusPos: Vec3 | undefined = positions.get(focusId);
-      if (focusPos !== undefined) scene.controls.setTarget(focusPos);
+      if (view === 'body' && focusPos !== undefined) scene.controls.setTarget(focusPos);
 
       scene.render(); // draw the frame (positions synced, camera retargeted above)
 
@@ -138,6 +176,7 @@ function boot(): void {
         overlay.show(focusId, { sunDistanceAu: sunAu, cameraDistance });
         hud.update({
           scaleMode: mode,
+          viewMode: view,
           warp: snap.timeScale,
           paused: snap.paused,
           simDate: new Date(J2000_UTC_MS + days * MS_PER_DAY),
@@ -168,6 +207,11 @@ function boot(): void {
     }
     if (event.repeat) return; // toggles below fire once per keypress
 
+    if (key === 's') {
+      toggleView(); // whole-system overview ↔ focused-body investigation
+      panel.update(panelState());
+      return;
+    }
     if (key === 'v') {
       toggleScale();
       panel.update(panelState());
@@ -199,7 +243,8 @@ function boot(): void {
   console.info(
     `[solar-system-glm] ${engine.version} kernel online. Focus-first explorer: ` +
       'drag or one finger orbits the focused body, wheel/pinch zooms. ' +
-      'G focus next body, K search, T pause, N/M time warp, H help, V scale.',
+      'G focus next body, S system view, K search, T pause, N/M time warp, ' +
+      'H help, V scale.',
   );
 }
 

@@ -136,6 +136,20 @@ export class SolarScene {
     this.camera.updateProjectionMatrix();
   }
 
+  /**
+   * Whole-system overview: orbit the Sun (scene origin) with every orbit inside
+   * the frame. The zoom floor resets to the mode default so the user can keep
+   * dragging/zooming freely across the full system — only the framing changes.
+   */
+  frameSystemView(distance: number): void {
+    const range = CAMERA_RANGES[this.mode];
+    this.controls.setRange(range.min, range.max);
+    this.controls.setTarget({ x: 0, y: 0, z: 0 });
+    this.controls.setDistance(distance);
+    this.camera.near = this.mode === 'true' ? 2e-5 : 0.1;
+    this.camera.updateProjectionMatrix();
+  }
+
   syncPositions(positions: ReadonlyMap<string, Vec3>, simDays: number): void {
     if (this.visuals === null) return;
     for (const [id, mesh] of this.visuals.meshes) {

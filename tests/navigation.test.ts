@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { CELESTIAL_CATALOG, type CelestialBodyRecord } from '../src/data/catalog';
 import { cycleFocus, focusableBodies } from '../src/gameplay/targeting';
-import { framingDistanceScene } from '../src/render/scale';
+import { framingDistanceScene, heliocentricRadiusScene, systemFramingDistanceScene } from '../src/render/scale';
 import {
   formatMassKg,
   formatPeriodDays,
@@ -56,6 +56,29 @@ describe('framingDistanceScene', () => {
   it('floors at 2.5 units in compressed mode for small bodies', () => {
     expect(framingDistanceScene(0.05, 'compressed')).toBe(2.5);
     expect(framingDistanceScene(2, 'compressed')).toBe(12);
+  });
+});
+
+describe('systemFramingDistanceScene', () => {
+  // Eris — the catalog's outermost orbit: a ≈ 67.78 AU, e ≈ 0.44.
+  const erisAphelionAu = 67.78 * 1.44;
+
+  it('frames the outermost aphelion with FOV headroom in both modes', () => {
+    expect(systemFramingDistanceScene(erisAphelionAu, 'true')).toBeCloseTo(
+      erisAphelionAu * 2.4,
+      9,
+    );
+    expect(systemFramingDistanceScene(erisAphelionAu, 'compressed')).toBeCloseTo(
+      heliocentricRadiusScene(erisAphelionAu, 'compressed') * 2.4,
+      9,
+    );
+  });
+
+  it('stays inside the camera ranges while clearing the outer orbits', () => {
+    const compressed = systemFramingDistanceScene(erisAphelionAu, 'compressed');
+    expect(compressed).toBeGreaterThan(600); // comfortably beyond Eris's scene orbit (~303 u)
+    expect(compressed).toBeLessThan(1_600); // compressed-mode camera max
+    expect(systemFramingDistanceScene(erisAphelionAu, 'true')).toBeLessThan(1_200);
   });
 });
 
