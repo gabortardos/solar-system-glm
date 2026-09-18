@@ -129,6 +129,8 @@ function boot(): void {
       const focusPos: Vec3 | undefined = positions.get(focusId);
       if (focusPos !== undefined) scene.controls.setTarget(focusPos);
 
+      scene.render(); // draw the frame (positions synced, camera retargeted above)
+
       if (frame % HUD_EVERY_FRAMES === 0 && focusPos !== undefined) {
         const focusRecord = getCelestial(focusId);
         const sunAu = sceneToAuDistance(lengthVec3(focusPos), mode);
@@ -192,6 +194,7 @@ function boot(): void {
   window.addEventListener('resize', onResize);
 
   focusBody(BOOT_FOCUS_ID); // frame the Moon before the first render
+  scene.resize(); // size renderer + camera aspect to the initial canvas
   engine.start();
   console.info(
     `[solar-system-glm] ${engine.version} kernel online. Focus-first explorer: ` +

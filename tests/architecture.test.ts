@@ -89,3 +89,20 @@ describe('architecture — visualization ⟂ data separation', () => {
     });
   }
 });
+
+describe('composition root — the render loop must draw', () => {
+  // Regression pin for the black-screen pivot bug: the engine ticks frames, but
+  // only an explicit scene.render() inside the registered renderer puts pixels
+  // on the canvas. If this ever disappears again, the app boots to blackness.
+  const mainSrc = readFileSync(resolve(process.cwd(), 'src/main.ts'), 'utf8');
+
+  it('main.ts draws every frame via scene.render()', () => {
+    expect(mainSrc, 'render loop must call scene.render()').toMatch(
+      /\bscene\.render\(\)/,
+    );
+  });
+
+  it('main.ts sizes the renderer before the first frame', () => {
+    expect(mainSrc, 'boot must call scene.resize()').toMatch(/\bscene\.resize\(\)/);
+  });
+});
